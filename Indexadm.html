@@ -4,19 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gullas - Administração</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <style>
         :root { --primary: #f59e0b; --bg: #ffffff; --text: #1e293b; }
         body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; color: var(--text); margin: 0; padding: 10px; }
+        
+        /* LOGIN */
         #loginOverlay { position: fixed; inset:0; background: white; display: flex; align-items: center; justify-content: center; z-index: 1000; }
         .login-box { text-align: center; padding: 20px; width: 100%; max-width: 300px; }
         .logo-adm { width: 130px; height: auto; margin-bottom: 15px; }
+
         .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
         h2 { font-size: 0.9rem; color: var(--primary); text-transform: uppercase; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; }
+        
         .row { display: flex; gap: 10px; margin-bottom: 10px; }
         select, input { padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; flex: 1; }
         .input-qtd { width: 80px; flex: none; text-align: center; }
-        .btn { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; }
+
+        .btn { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.3s; }
         .btn-primary { background: var(--primary); color: white; }
+        .btn-pdf { background: #1e293b; color: white; margin-top: 15px; }
+        .btn:active { transform: scale(0.98); }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
         th { text-align: left; color: #64748b; padding-bottom: 10px; }
         td { padding: 12px 5px; border-top: 1px solid #f1f5f9; }
@@ -68,6 +78,10 @@
                 </thead>
                 <tbody id="corpoBalanço"></tbody>
             </table>
+            
+            <button class="btn btn-pdf" onclick="gerarPDF()">
+                📄 GERAR RELATÓRIO EM PDF
+            </button>
         </div>
     </div>
 
@@ -76,6 +90,7 @@
     let dados = {};
 
     function checkLogin() {
+        // Senha padrão conforme solicitado
         if(document.getElementById('pass').value === "123") {
             document.getElementById('loginOverlay').style.display = "none";
             document.getElementById('mainAdm').style.display = "block";
@@ -95,7 +110,11 @@
 
     function cadastrar() {
         const p = document.getElementById('novoItem').value;
-        if(p) { cardapio.push(p); document.getElementById('novoItem').value = ""; init(); }
+        if(p) { 
+            cardapio.push(p); 
+            document.getElementById('novoItem').value = ""; 
+            init(); 
+        }
     }
 
     function addEnvio() {
@@ -122,7 +141,48 @@
             }
         });
     }
+
+    function gerarPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        const dataAtual = new Date().toLocaleDateString('pt-BR');
+        
+        // Cabeçalho do PDF
+        doc.setFontSize(18);
+        doc.setTextColor(245, 158, 11); // Cor primária Gullas
+        doc.text("Gullas - Relatório de Vendas", 14, 20);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Data de Emissão: ${dataAtual}`, 14, 28);
+        doc.text("Relatório gerado via Painel Administrativo", 14, 33);
+
+        // Dados da Tabela
+        const rows = [];
+        cardapio.forEach(p => {
+            if(dados[p].envio > 0) {
+                const vendido = dados[p].envio - dados[p].sobra;
+                rows.push([p, dados[p].envio, dados[p].sobra, vendido]);
+            }
+        });
+
+        if (rows.length === 0) {
+            alert("Não há dados de envio para gerar o relatório.");
+            return;
+        }
+
+        doc.autoTable({
+            startY: 40,
+            head: [['Produto', 'Enviado', 'Sobra', 'Vendido']],
+            body: rows,
+            theme: 'grid',
+            headStyles: { fillBox: [245, 158, 11], textColor: [255, 255, 255] },
+            styles: { fontSize: 9 }
+        });
+
+        doc.save(`Relatorio_Gullas_${dataAtual.replace(/\//g, '-')}.pdf`);
+    }
 </script>
 </body>
-            </html>
-            
+</html>
