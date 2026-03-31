@@ -7,21 +7,16 @@
     <style>
         :root { --primary: #f59e0b; --bg: #ffffff; --text: #1e293b; }
         body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; color: var(--text); margin: 0; padding: 10px; }
-        
-        /* LOGIN */
         #loginOverlay { position: fixed; inset:0; background: white; display: flex; align-items: center; justify-content: center; z-index: 1000; }
         .login-box { text-align: center; padding: 20px; width: 100%; max-width: 300px; }
-
+        .logo-adm { width: 130px; height: auto; margin-bottom: 15px; }
         .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
         h2 { font-size: 0.9rem; color: var(--primary); text-transform: uppercase; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; }
-        
         .row { display: flex; gap: 10px; margin-bottom: 10px; }
         select, input { padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; flex: 1; }
         .input-qtd { width: 80px; flex: none; text-align: center; }
-
         .btn { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; }
         .btn-primary { background: var(--primary); color: white; }
-        
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
         th { text-align: left; color: #64748b; padding-bottom: 10px; }
         td { padding: 12px 5px; border-top: 1px solid #f1f5f9; }
@@ -29,20 +24,21 @@
     </style>
 </head>
 <body>
-    
-    <div style="text-align: center; padding: 15px 0;">
-    <img src="1774954149094.png" alt="Logo Gullas" style="width: 140px; height: auto; border-radius: 10px;">
-    </div>
-    
+
     <div id="loginOverlay">
         <div class="login-box">
-            <h2 style="color:var(--primary)">GULLAS ADM</h2>
+            <img src="1774954149094.png" alt="Gullas Logo" class="logo-adm">
+            <h2 style="color:var(--primary); margin-bottom: 20px;">ACESSO RESTRITO</h2>
             <input type="password" id="pass" placeholder="Sua Senha" style="width:100%; margin-bottom:15px;"><br>
-            <button class="btn btn-primary" onclick="checkLogin()">ACESSAR</button>
+            <button class="btn btn-primary" onclick="checkLogin()">ACESSAR PAINEL</button>
         </div>
     </div>
 
     <div id="mainAdm" style="display:none;">
+        <div style="text-align:center; margin-bottom: 15px;">
+            <img src="1774954149094.png" alt="Gullas Logo" style="width: 80px; height: auto;">
+        </div>
+
         <div class="card">
             <h2>🚚 Enviar Remessa</h2>
             <div class="row">
@@ -53,15 +49,15 @@
         </div>
 
         <div class="card">
-            <h2>➕ Adicionar Novo Item ao Cardápio</h2>
+            <h2>➕ Novo Item</h2>
             <div class="row">
-                <input type="text" id="novoItem" placeholder="Ex: Pastel de Belém">
+                <input type="text" id="novoItem" placeholder="Nome do salgado">
                 <button class="btn btn-primary" style="width:80px" onclick="cadastrar()">ADD</button>
             </div>
         </div>
 
         <div class="card">
-            <h2>📊 Relatório de Vendas (Balanço)</h2>
+            <h2>📊 Relatório de Vendas</h2>
             <table>
                 <thead>
                     <tr>
@@ -77,7 +73,7 @@
 
 <script>
     let cardapio = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
-    let dados = {}; // Armazena envios e sobras
+    let dados = {};
 
     function checkLogin() {
         if(document.getElementById('pass').value === "123") {
@@ -128,4 +124,5 @@
     }
 </script>
 </body>
-</html>
+            </html>
+            
