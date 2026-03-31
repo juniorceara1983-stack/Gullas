@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gullas - Administração</title>
+    <style>
+        :root { --primary: #f59e0b; --bg: #ffffff; --text: #1e293b; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; color: var(--text); margin: 0; padding: 10px; }
+        
+        /* LOGIN */
+        #loginOverlay { position: fixed; inset:0; background: white; display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .login-box { text-align: center; padding: 20px; width: 100%; max-width: 300px; }
+
+        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        h2 { font-size: 0.9rem; color: var(--primary); text-transform: uppercase; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; }
+        
+        .row { display: flex; gap: 10px; margin-bottom: 10px; }
+        select, input { padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; flex: 1; }
+        .input-qtd { width: 80px; flex: none; text-align: center; }
+
+        .btn { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; }
+        .btn-primary { background: var(--primary); color: white; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        th { text-align: left; color: #64748b; padding-bottom: 10px; }
+        td { padding: 12px 5px; border-top: 1px solid #f1f5f9; }
+        .col-venda { font-weight: bold; color: #16a34a; text-align: right; }
+    </style>
+</head>
+<body>
+
+    <div id="loginOverlay">
+        <div class="login-box">
+            <h2 style="color:var(--primary)">GULLAS ADM</h2>
+            <input type="password" id="pass" placeholder="Sua Senha" style="width:100%; margin-bottom:15px;"><br>
+            <button class="btn btn-primary" onclick="checkLogin()">ACESSAR</button>
+        </div>
+    </div>
+
+    <div id="mainAdm" style="display:none;">
+        <div class="card">
+            <h2>🚚 Enviar Remessa</h2>
+            <div class="row">
+                <select id="prodSelect"></select>
+                <input type="number" id="qtdAdd" class="input-qtd" placeholder="Qtd">
+            </div>
+            <button class="btn btn-primary" onclick="addEnvio()">CONFIRMAR ENVIO</button>
+        </div>
+
+        <div class="card">
+            <h2>➕ Adicionar Novo Item ao Cardápio</h2>
+            <div class="row">
+                <input type="text" id="novoItem" placeholder="Ex: Pastel de Belém">
+                <button class="btn btn-primary" style="width:80px" onclick="cadastrar()">ADD</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📊 Relatório de Vendas (Balanço)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>PRODUTO</th>
+                        <th style="text-align:center">ENVIADO</th>
+                        <th style="text-align:right">VENDIDO</th>
+                    </tr>
+                </thead>
+                <tbody id="corpoBalanço"></tbody>
+            </table>
+        </div>
+    </div>
+
+<script>
+    let cardapio = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
+    let dados = {}; // Armazena envios e sobras
+
+    function checkLogin() {
+        if(document.getElementById('pass').value === "123") {
+            document.getElementById('loginOverlay').style.display = "none";
+            document.getElementById('mainAdm').style.display = "block";
+            init();
+        } else { alert("Senha Errada"); }
+    }
+
+    function init() {
+        const sel = document.getElementById('prodSelect');
+        sel.innerHTML = "";
+        cardapio.forEach(p => {
+            sel.innerHTML += `<option value="${p}">${p}</option>`;
+            if(!dados[p]) dados[p] = { envio: 0, sobra: 0 };
+        });
+        render();
+    }
+
+    function cadastrar() {
+        const p = document.getElementById('novoItem').value;
+        if(p) { cardapio.push(p); document.getElementById('novoItem').value = ""; init(); }
+    }
+
+    function addEnvio() {
+        const p = document.getElementById('prodSelect').value;
+        const q = parseInt(document.getElementById('qtdAdd').value) || 0;
+        dados[p].envio += q;
+        document.getElementById('qtdAdd').value = "";
+        render();
+    }
+
+    function render() {
+        const corpo = document.getElementById('corpoBalanço');
+        corpo.innerHTML = "";
+        cardapio.forEach(p => {
+            if(dados[p].envio > 0) {
+                const vendido = dados[p].envio - dados[p].sobra;
+                corpo.innerHTML += `
+                    <tr>
+                        <td>${p}</td>
+                        <td style="text-align:center">${dados[p].envio}</td>
+                        <td class="col-venda">${vendido >= 0 ? vendido : '--'}</td>
+                    </tr>
+                `;
+            }
+        });
+    }
+</script>
+</body>
+</html>
