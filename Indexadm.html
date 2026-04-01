@@ -1,188 +1,80 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gullas - Administração</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-    <style>
-        :root { --primary: #f59e0b; --bg: #ffffff; --text: #1e293b; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; color: var(--text); margin: 0; padding: 10px; }
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzip6qASNtkcRNBWMINpQWVoxU71AL0Ajws_BmzobGdEBA23fa0-WvqX3GjIZf_me_1/exec";
+let dadosGlobais = [];
+
+// Envia nova remessa
+async function addEnvio() {
+    const p = document.getElementById('prodSelect').value;
+    const q = parseInt(document.getElementById('qtdAdd').value);
+    if(!q) return alert("Digite uma quantidade.");
+
+    await fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify({ action: "envio", produto: p, qtd: q })
+    });
+
+    alert("Envio de " + p + " registado!");
+    document.getElementById('qtdAdd').value = "";
+    carregarRelatorio(); 
+}
+
+// Carrega e Processa o Relatório
+async function carregarRelatorio() {
+    try {
+        const response = await fetch(SCRIPT_URL);
+        const rows = await response.json(); 
+        // rows[0] são os cabeçalhos, os dados começam em rows[1]
         
-        /* LOGIN */
-        #loginOverlay { position: fixed; inset:0; background: white; display: flex; align-items: center; justify-content: center; z-index: 1000; }
-        .login-box { text-align: center; padding: 20px; width: 100%; max-width: 300px; }
-        .logo-adm { width: 130px; height: auto; margin-bottom: 15px; }
-
-        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        h2 { font-size: 0.9rem; color: var(--primary); text-transform: uppercase; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; }
+        const consolidado = {};
+        const cardapio = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
         
-        .row { display: flex; gap: 10px; margin-bottom: 10px; }
-        select, input { padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; flex: 1; }
-        .input-qtd { width: 80px; flex: none; text-align: center; }
+        // Inicializa o objeto
+        cardapio.forEach(p => consolidado[p] = { envio: 0, sobra: 0 });
 
-        .btn { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.3s; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-pdf { background: #1e293b; color: white; margin-top: 15px; }
-        .btn:active { transform: scale(0.98); }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
-        th { text-align: left; color: #64748b; padding-bottom: 10px; }
-        td { padding: 12px 5px; border-top: 1px solid #f1f5f9; }
-        .col-venda { font-weight: bold; color: #16a34a; text-align: right; }
-    </style>
-</head>
-<body>
+        // Processa as linhas da planilha
+        rows.slice(1).forEach(row => {
+            const tipo = row[1]; // Coluna B (ENVIO ou SOBRA)
+            const prod = row[2]; // Coluna C (Produto)
+            const qtd = parseInt(row[3]) || 0; // Coluna D (Quantidade)
 
-    <div id="loginOverlay">
-        <div class="login-box">
-            <img src="1774954149094.png" alt="Gullas Logo" class="logo-adm">
-            <h2 style="color:var(--primary); margin-bottom: 20px;">ACESSO RESTRITO</h2>
-            <input type="password" id="pass" placeholder="Sua Senha" style="width:100%; margin-bottom:15px;"><br>
-            <button class="btn btn-primary" onclick="checkLogin()">ACESSAR PAINEL</button>
-        </div>
-    </div>
-
-    <div id="mainAdm" style="display:none;">
-        <div style="text-align:center; margin-bottom: 15px;">
-            <img src="1774954149094.png" alt="Gullas Logo" style="width: 80px; height: auto;">
-        </div>
-
-        <div class="card">
-            <h2>🚚 Enviar Remessa</h2>
-            <div class="row">
-                <select id="prodSelect"></select>
-                <input type="number" id="qtdAdd" class="input-qtd" placeholder="Qtd">
-            </div>
-            <button class="btn btn-primary" onclick="addEnvio()">CONFIRMAR ENVIO</button>
-        </div>
-
-        <div class="card">
-            <h2>➕ Novo Item</h2>
-            <div class="row">
-                <input type="text" id="novoItem" placeholder="Nome do salgado">
-                <button class="btn btn-primary" style="width:80px" onclick="cadastrar()">ADD</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2>📊 Relatório de Vendas</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>PRODUTO</th>
-                        <th style="text-align:center">ENVIADO</th>
-                        <th style="text-align:right">VENDIDO</th>
-                    </tr>
-                </thead>
-                <tbody id="corpoBalanço"></tbody>
-            </table>
-            
-            <button class="btn btn-pdf" onclick="gerarPDF()">
-                📄 GERAR RELATÓRIO EM PDF
-            </button>
-        </div>
-    </div>
-
-<script>
-    let cardapio = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
-    let dados = {};
-
-    function checkLogin() {
-        // Senha padrão conforme solicitado
-        if(document.getElementById('pass').value === "123") {
-            document.getElementById('loginOverlay').style.display = "none";
-            document.getElementById('mainAdm').style.display = "block";
-            init();
-        } else { alert("Senha Errada"); }
-    }
-
-    function init() {
-        const sel = document.getElementById('prodSelect');
-        sel.innerHTML = "";
-        cardapio.forEach(p => {
-            sel.innerHTML += `<option value="${p}">${p}</option>`;
-            if(!dados[p]) dados[p] = { envio: 0, sobra: 0 };
-        });
-        render();
-    }
-
-    function cadastrar() {
-        const p = document.getElementById('novoItem').value;
-        if(p) { 
-            cardapio.push(p); 
-            document.getElementById('novoItem').value = ""; 
-            init(); 
-        }
-    }
-
-    function addEnvio() {
-        const p = document.getElementById('prodSelect').value;
-        const q = parseInt(document.getElementById('qtdAdd').value) || 0;
-        dados[p].envio += q;
-        document.getElementById('qtdAdd').value = "";
-        render();
-    }
-
-    function render() {
-        const corpo = document.getElementById('corpoBalanço');
-        corpo.innerHTML = "";
-        cardapio.forEach(p => {
-            if(dados[p].envio > 0) {
-                const vendido = dados[p].envio - dados[p].sobra;
-                corpo.innerHTML += `
-                    <tr>
-                        <td>${p}</td>
-                        <td style="text-align:center">${dados[p].envio}</td>
-                        <td class="col-venda">${vendido >= 0 ? vendido : '--'}</td>
-                    </tr>
-                `;
-            }
-        });
-    }
-
-    function gerarPDF() {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        
-        const dataAtual = new Date().toLocaleDateString('pt-BR');
-        
-        // Cabeçalho do PDF
-        doc.setFontSize(18);
-        doc.setTextColor(245, 158, 11); // Cor primária Gullas
-        doc.text("Gullas - Relatório de Vendas", 14, 20);
-        
-        doc.setFontSize(10);
-        doc.setTextColor(100, 116, 139);
-        doc.text(`Data de Emissão: ${dataAtual}`, 14, 28);
-        doc.text("Relatório gerado via Painel Administrativo", 14, 33);
-
-        // Dados da Tabela
-        const rows = [];
-        cardapio.forEach(p => {
-            if(dados[p].envio > 0) {
-                const vendido = dados[p].envio - dados[p].sobra;
-                rows.push([p, dados[p].envio, dados[p].sobra, vendido]);
+            if(consolidado[prod]) {
+                if(tipo === "ENVIO") consolidado[prod].envio += qtd;
+                if(tipo === "SOBRA") consolidado[prod].sobra += qtd;
             }
         });
 
-        if (rows.length === 0) {
-            alert("Não há dados de envio para gerar o relatório.");
-            return;
-        }
-
-        doc.autoTable({
-            startY: 40,
-            head: [['Produto', 'Enviado', 'Sobra', 'Vendido']],
-            body: rows,
-            theme: 'grid',
-            headStyles: { fillBox: [245, 158, 11], textColor: [255, 255, 255] },
-            styles: { fontSize: 9 }
-        });
-
-        doc.save(`Relatorio_Gullas_${dataAtual.replace(/\//g, '-')}.pdf`);
+        exibirTabela(consolidado);
+    } catch (e) {
+        console.error("Erro ao processar relatório:", e);
     }
-</script>
-</body>
-</html>
+}
+
+function exibirTabela(dados) {
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = "";
+
+    for (const prod in dados) {
+        const enviado = dados[prod].envio;
+        const sobra = dados[prod].sobra;
+        const vendido = enviado - sobra;
+
+        if(enviado > 0 || sobra > 0) {
+            tbody.innerHTML += `
+                <tr>
+                    <td style="text-align:left;">${prod}</td>
+                    <td>${enviado}</td>
+                    <td>${sobra}</td>
+                    <td style="font-weight:bold; color:var(--primary);">${vendido >= 0 ? vendido : 0}</td>
+                </tr>
+            `;
+        }
+    }
+}
+
+// Inicia o painel carregando os dados
+window.onload = () => {
+    // Se já estiver logado, carrega
+    if(document.getElementById('loginOverlay').style.display === 'none') {
+        carregarRelatorio();
+    }
+};
