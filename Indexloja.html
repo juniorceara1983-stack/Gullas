@@ -1,54 +1,47 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gullas - Conferência de Loja</title>
-    <style>
-        :root { --primary: #f59e0b; --bg: #ffffff; --text: #1e293b; --input-bg: #f8fafc; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
-        .header { text-align: center; margin-bottom: 20px; }
-        .logo-img { width: 140px; height: auto; margin-bottom: 10px; }
-        .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
-        .item-name { font-weight: 600; font-size: 0.95rem; }
-        input { width: 80px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; text-align: center; background: var(--input-bg); font-size: 1rem; }
-        .btn { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; margin-top: 20px; cursor: pointer; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <img src="1774954149094.png" alt="Gullas Logo" class="logo-img">
-        <h2 style="margin:0; color:var(--primary); font-size: 1.2rem;">CONFERÊNCIA DE LOJA</h2>
-    </div>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzip6qASNtkcRNBWMINpQWVoxU71AL0Ajws_BmzobGdEBA23fa0-WvqX3GjIZf_me_1/exec";
 
-    <div class="card">
-        <select id="turnoSelect" style="width:100%; padding:10px; margin-bottom:15px; border-radius:8px; border:1px solid #cbd5e1;">
-            <option value="Manhã">Turno: Manhã</option>
-            <option value="Tarde">Turno: Tarde</option>
-        </select>
-        <input type="text" id="nomeFunc" placeholder="Seu Nome" style="width:100%; text-align:left; margin-bottom:20px;">
-        
-        <div id="listaItens"></div>
-        
-        <button class="btn" onclick="enviarSobra()">ENVIAR CONFERÊNCIA</button>
-    </div>
+async function enviarSobra() {
+    const nome = document.getElementById('nomeFunc').value;
+    const turno = document.getElementById('turnoSelect').value;
+    const btn = document.querySelector('.btn');
 
-    <script>
-        const itensAtivos = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
-        const container = document.getElementById('listaItens');
-        itensAtivos.forEach(item => {
-            container.innerHTML += `
-                <div class="item-row">
-                    <span class="item-name">${item}</span>
-                    <input type="number" class="sobra-input" data-prod="${item}" placeholder="0">
-                </div>
-            `;
+    if(!nome) return alert("Por favor, digite o seu nome.");
+
+    btn.innerText = "A ENVIAR...";
+    btn.disabled = true;
+
+    const inputs = document.querySelectorAll('.sobra-input');
+    const itens = Array.from(inputs)
+        .filter(i => i.value !== "") // Só envia o que foi preenchido
+        .map(i => ({
+            produto: i.dataset.prod,
+            qtd: parseInt(i.value)
+        }));
+
+    if(itens.length === 0) {
+        alert("Preencha pelo menos um item.");
+        btn.innerText = "ENVIAR CONFERÊNCIA";
+        btn.disabled = false;
+        return;
+    }
+
+    try {
+        await fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify({
+                action: "sobra",
+                funcionario: nome,
+                turno: turno,
+                itens: itens
+            })
         });
-
-        function enviarSobra() {
-            alert("Sobra registrada com sucesso!");
-        }
-    </script>
-</body>
-</html>
+        alert("Conferência enviada com sucesso!");
+        inputs.forEach(i => i.value = "");
+    } catch (e) {
+        alert("Erro na ligação.");
+    } finally {
+        btn.innerText = "ENVIAR CONFERÊNCIA";
+        btn.disabled = false;
+    }
+}
