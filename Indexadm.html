@@ -3,115 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gullas - ADM</title>
+    <title>Gullas ADM</title>
     <style>
-        :root { --primary: #f59e0b; --dark: #1e293b; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; padding: 10px; margin: 0; }
-        #loginOverlay { position: fixed; inset:0; background: white; display: flex; align-items: center; justify-content: center; z-index: 1000; }
-        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .row { display: flex; gap: 8px; margin-bottom: 10px; }
-        input, select { padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; flex: 1; }
-        .btn { padding: 12px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; }
-        .btn-orange { background: var(--primary); color: white; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; }
-        th { text-align: left; padding: 10px; border-bottom: 2px solid #f1f5f9; color: #64748b; }
-        td { padding: 10px; border-bottom: 1px solid #f1f5f9; text-align: center; }
+        :root { --primary: #f59e0b; }
+        body { font-family: sans-serif; background: #f1f5f9; padding: 15px; }
+        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        input, select { padding: 10px; border: 1px solid #ddd; border-radius: 8px; width: 100%; box-sizing: border-box; }
+        .btn { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; background: var(--primary); color: white; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: center; }
     </style>
 </head>
 <body>
+    <div id="login" style="text-align:center; padding-top: 50px;">
+        <input type="password" id="pass" placeholder="Senha" style="width:200px; margin-bottom:10px;"><br>
+        <button class="btn" style="width:200px" onclick="if(document.getElementById('pass').value==='389180'){document.getElementById('login').style.display='none';document.getElementById('adm').style.display='block';init();}">ENTRAR</button>
+    </div>
 
-    <div id="loginOverlay">
-        <div style="text-align:center;">
-            <h2 style="color:var(--primary)">Acesso ADM</h2>
-            <input type="password" id="passInput" placeholder="Senha" style="display:block; margin: 10px auto;">
-            <button class="btn btn-orange" style="width:200px" onclick="checkLogin()">ENTRAR</button>
+    <div id="adm" style="display:none;">
+        <div class="card">
+            <h3>✨ Novo Item</h3>
+            <input type="text" id="novoItem" placeholder="Nome do item">
+            <button class="btn" style="margin-top:10px; background:#10b981" onclick="cardapio.push(document.getElementById('novoItem').value); init();">ADICIONAR</button>
+        </div>
+
+        <div class="card">
+            <h3>🚚 Enviar Loja</h3>
+            <select id="sel"></select>
+            <input type="number" id="qtd" placeholder="Qtd" style="margin-top:10px;">
+            <button class="btn" style="margin-top:10px;" onclick="enviar()">SALVAR ENVIO</button>
+        </div>
+
+        <div class="card">
+            <h3>📊 Balanço</h3>
+            <table id="tab"><thead><tr><th>Prod</th><th>Env</th><th>Sob</th><th>Venda</th></tr></thead><tbody id="corpo"></tbody></table>
+            <button class="btn" style="margin-top:10px; background:#64748b" onclick="carregar()">🔄 ATUALIZAR</button>
         </div>
     </div>
 
-    <div id="mainContent" style="display:none;">
-        <div class="card">
-            <h3>✨ Cadastrar Novo Item</h3>
-            <div class="row">
-                <input type="text" id="novoItem" placeholder="Nome do produto">
-                <button class="btn btn-orange" style="width:100px; background:#10b981;" onclick="addAoCardapio()">ADD</button>
-            </div>
-        </div>
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwymkSXlXjQj27nWokMK9nNSystwUnDXCUqV_b2QcfDRCswl_DhTDJ06ozslFf_FA1h/exec";
+        let cardapio = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
 
-        <div class="card">
-            <h3>🚚 Registrar Envio</h3>
-            <div class="row">
-                <select id="selProd"></select>
-                <input type="number" id="qtdEnvio" style="width:80px" placeholder="Qtd">
-            </div>
-            <button class="btn btn-orange" onclick="enviarParaLoja()">SALVAR ENVIO</button>
-        </div>
+        function init() {
+            const s = document.getElementById('sel'); s.innerHTML = "";
+            cardapio.forEach(p => s.innerHTML += `<option value="${p}">${p}</option>`);
+        }
 
-        <div class="card">
-            <h3>📊 Balanço Hoje</h3>
-            <table>
-                <thead><tr><th>Produto</th><th>Envio</th><th>Sobra</th><th>Venda</th></tr></thead>
-                <tbody id="corpoTabela"></tbody>
-            </table>
-            <button class="btn" style="background:#64748b; color:white; margin-top:10px;" onclick="carregarDados()">🔄 ATUALIZAR</button>
-        </div>
-    </div>
+        async function enviar() {
+            const p = document.getElementById('sel').value, q = document.getElementById('qtd').value;
+            await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "envio", produto: p, qtd: q }) });
+            alert("Enviado!"); carregar();
+        }
 
-<script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwymkSXlXjQj27nWokMK9nNSystwUnDXCUqV_b2QcfDRCswl_DhTDJ06ozslFf_FA1h/exec";
-    let cardapio = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
-
-    function checkLogin() {
-        if(document.getElementById('passInput').value === "389180") {
-            document.getElementById('loginOverlay').style.display = 'none';
-            document.getElementById('mainContent').style.display = 'block';
-            init(); carregarDados();
-        } else { alert("Senha incorreta!"); }
-    }
-
-    function init() {
-        const s = document.getElementById('selProd'); s.innerHTML = "";
-        cardapio.forEach(p => s.innerHTML += `<option value="${p}">${p}</option>`);
-    }
-
-    function addAoCardapio() {
-        const n = document.getElementById('novoItem').value;
-        if(!n) return;
-        if(!cardapio.includes(n)) cardapio.push(n);
-        init(); document.getElementById('novoItem').value = "";
-    }
-
-    async function enviarParaLoja() {
-        const p = document.getElementById('selProd').value;
-        const q = document.getElementById('qtdEnvio').value;
-        if(!q) return alert("Qtd!");
-        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "envio", produto: p, qtd: q }) });
-        alert("Enviado!"); carregarDados();
-    }
-
-    async function carregarDados() {
-        const t = document.getElementById('corpoTabela');
-        t.innerHTML = "<tr><td colspan='4'>Carregando...</td></tr>";
-        try {
-            const res = await fetch(SCRIPT_URL);
-            const rows = await res.json();
-            const resumo = {};
-            cardapio.forEach(p => resumo[p] = {e:0, s:0});
-            rows.slice(1).forEach(r => {
-                const tipo = r[1], prod = r[2], qtd = parseInt(r[3])||0;
-                if(resumo[prod]) {
-                    if(tipo === "ENVIO") resumo[prod].e += qtd;
-                    if(tipo === "SOBRA") resumo[prod].s += qtd;
+        async function carregar() {
+            const corpo = document.getElementById('corpo');
+            corpo.innerHTML = "<tr><td colspan='4'>Carregando...</td></tr>";
+            try {
+                const res = await fetch(SCRIPT_URL);
+                const rows = await res.json();
+                const resumo = {};
+                cardapio.forEach(p => resumo[p] = {e:0, s:0});
+                rows.slice(1).forEach(r => {
+                    const tipo = r[1], prod = r[2], qtd = parseInt(r[3])||0;
+                    if(resumo[prod]) {
+                        if(tipo === "ENVIO") resumo[prod].e += qtd;
+                        if(tipo === "SOBRA") resumo[prod].s += qtd;
+                    }
+                });
+                corpo.innerHTML = "";
+                for(let p in resumo) {
+                    const v = resumo[p].e - resumo[p].s;
+                    if(resumo[p].e > 0 || resumo[p].s > 0)
+                        corpo.innerHTML += `<tr><td>${p}</td><td>${resumo[p].e}</td><td>${resumo[p].s}</td><td style="font-weight:bold;color:green">${v>0?v:0}</td></tr>`;
                 }
-            });
-            t.innerHTML = "";
-            for(let p in resumo) {
-                const v = resumo[p].e - resumo[p].s;
-                if(resumo[p].e > 0 || resumo[p].s > 0) {
-                    t.innerHTML += `<tr><td style="text-align:left">${p}</td><td>${resumo[p].e}</td><td>${resumo[p].s}</td><td style="color:#16a34a; font-weight:bold">${v > 0 ? v : 0}</td></tr>`;
-                }
-            }
-        } catch(e) { t.innerHTML = "Erro."; }
-    }
-</script>
+            } catch(e) { corpo.innerHTML = "<tr><td colspan='4' style='color:red'>Erro ao ler planilha. Verifique se o Script está como 'Qualquer Pessoa'.</td></tr>"; }
+        }
+    </script>
 </body>
 </html>
