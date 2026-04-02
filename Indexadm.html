@@ -7,11 +7,13 @@
     <style>
         :root { --primary: #f59e0b; --dark: #1e293b; }
         body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; padding: 10px; margin: 0; }
+        #loginOverlay { position: fixed; inset:0; background: white; display: flex; align-items: center; justify-content: center; z-index: 1000; }
         .card { background: white; border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .row { display: flex; gap: 8px; margin-bottom: 10px; }
         input, select { padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; flex: 1; }
         .btn { padding: 12px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; }
         .btn-orange { background: var(--primary); color: white; }
+        .btn-green { background: #10b981; color: white; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; }
         th { text-align: left; padding: 10px; border-bottom: 2px solid #f1f5f9; color: #64748b; }
         td { padding: 10px; border-bottom: 1px solid #f1f5f9; text-align: center; }
@@ -19,39 +21,58 @@
 </head>
 <body>
 
-    <div class="card">
-        <h3 style="margin-top:0;">✨ Cadastrar Item Novo</h3>
-        <div class="row">
-            <input type="text" id="novoItem" placeholder="Ex: Coxinha">
-            <button class="btn btn-orange" style="width:100px" onclick="addAoCardapio()">ADD</button>
+    <div id="loginOverlay">
+        <div style="text-align:center;">
+            <img src="1774954149094.png" width="100" style="margin-bottom:20px;">
+            <input type="password" id="passInput" placeholder="Senha ADM" style="display:block; margin-bottom:10px;">
+            <button class="btn btn-orange" onclick="checkLogin()">ENTRAR</button>
         </div>
     </div>
 
-    <div class="card">
-        <h3 style="margin-top:0;">🚚 Enviar para Loja</h3>
-        <div class="row">
-            <select id="selProd"></select>
-            <input type="number" id="qtdEnvio" style="width:80px" placeholder="Qtd">
+    <div id="mainContent" style="display:none;">
+        <div class="card">
+            <h3>✨ Cadastrar Novo Produto</h3>
+            <div class="row">
+                <input type="text" id="novoItem" placeholder="Nome do item">
+                <button class="btn btn-green" style="width:100px" onclick="addAoCardapio()">ADD</button>
+            </div>
         </div>
-        <button class="btn btn-orange" onclick="enviarParaLoja()">REGISTRAR SAÍDA</button>
-    </div>
 
-    <div class="card">
-        <h3 style="margin-top:0;">📊 Vendas (Balanço)</h3>
-        <table id="relatorio">
-            <thead>
-                <tr><th style="text-align:left">Produto</th><th>Envio</th><th>Sobra</th><th>Venda</th></tr>
-            </thead>
-            <tbody id="corpoTabela"></tbody>
-        </table>
-        <button class="btn" style="background:#64748b; color:white; margin-top:15px;" onclick="carregarDados()">🔄 ATUALIZAR TABELA</button>
+        <div class="card">
+            <h3>🚚 Enviar para Loja</h3>
+            <div class="row">
+                <select id="selProd"></select>
+                <input type="number" id="qtdEnvio" style="width:80px" placeholder="Qtd">
+            </div>
+            <button class="btn btn-orange" onclick="enviarParaLoja()">REGISTRAR ENVIO</button>
+        </div>
+
+        <div class="card">
+            <h3>📊 Balanço de Vendas</h3>
+            <table>
+                <thead>
+                    <tr><th style="text-align:left">Produto</th><th>Envio</th><th>Sobra</th><th>Venda</th></tr>
+                </thead>
+                <tbody id="corpoTabela"></tbody>
+            </table>
+            <button class="btn" style="background:#64748b; color:white; margin-top:15px;" onclick="carregarDados()">🔄 ATUALIZAR</button>
+        </div>
     </div>
 
 <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-Tx_2RqLERiALStmIUt_Q4CJICttL1ETNMhMIqs5E0_dywxs6sIMMXHfV0WisSMs8/exec";
     let cardapio = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
 
-    function atualizarSelect() {
+    function checkLogin() {
+        if(document.getElementById('passInput').value === "389180") {
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+            init();
+            carregarDados();
+        } else { alert("Senha incorreta!"); }
+    }
+
+    function init() {
         const s = document.getElementById('selProd');
         s.innerHTML = "";
         cardapio.forEach(p => s.innerHTML += `<option value="${p}">${p}</option>`);
@@ -60,29 +81,24 @@
     function addAoCardapio() {
         const n = document.getElementById('novoItem').value;
         if(!n) return;
-        cardapio.push(n);
-        atualizarSelect();
+        if(!cardapio.includes(n)) cardapio.push(n);
+        init();
         document.getElementById('novoItem').value = "";
-        alert("Item adicionado à lista!");
+        alert("Item adicionado!");
     }
 
     async function enviarParaLoja() {
         const p = document.getElementById('selProd').value;
         const q = document.getElementById('qtdEnvio').value;
         if(!q) return alert("Digite a quantidade!");
-
-        await fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            body: JSON.stringify({ action: "envio", produto: p, qtd: q })
-        });
-        alert("Enviado!");
+        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "envio", produto: p, qtd: q }) });
+        alert("Envio registrado!");
         carregarDados();
     }
 
     async function carregarDados() {
         const t = document.getElementById('corpoTabela');
-        t.innerHTML = "<tr><td colspan='4'>Buscando...</td></tr>";
+        t.innerHTML = "<tr><td colspan='4'>Buscando dados...</td></tr>";
         try {
             const res = await fetch(SCRIPT_URL);
             const rows = await res.json();
@@ -103,11 +119,8 @@
                     t.innerHTML += `<tr><td style="text-align:left">${p}</td><td>${resumo[p].e}</td><td>${resumo[p].s}</td><td style="color:#16a34a; font-weight:bold">${v > 0 ? v : 0}</td></tr>`;
                 }
             }
-        } catch(e) { t.innerHTML = "Erro ao ler dados."; }
+        } catch(e) { t.innerHTML = "Erro ao carregar dados."; }
     }
-
-    atualizarSelect();
-    carregarDados();
 </script>
 </body>
 </html>
