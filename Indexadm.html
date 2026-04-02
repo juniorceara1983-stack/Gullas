@@ -12,6 +12,7 @@
         navigator.serviceWorker.register('sw.js');
       }
     </script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <style>
@@ -21,7 +22,6 @@
         .card { background: white; border-radius: 16px; padding: 18px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         h3 { margin: 0 0 15px 0; font-size: 1rem; text-transform: uppercase; color: #1e293b; }
         
-        /* Acordeão de Itens */
         .btn-lista-toggle { background: white; color: var(--primary); border: 2px solid var(--primary); padding: 15px; border-radius: 12px; width: 100%; font-weight: bold; font-size: 1rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; }
         #listaProducao { display: none; padding: 10px; background: #fffcf5; border-radius: 0 0 12px 12px; border: 1px solid #ffeeba; border-top: none; margin-bottom: 15px; }
         
@@ -36,12 +36,15 @@
         .btn-main { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; width: 100%; cursor: pointer; font-size: 1rem; margin-top: 10px; transition: 0.2s; }
         .btn-main:active { transform: scale(0.98); }
 
-        /* Modais */
+        /* Modais Melhorados */
         .modal-overlay { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; backdrop-filter: blur(3px); }
         .modal-content { background: white; width: 85%; max-width: 350px; padding: 30px; border-radius: 25px; text-align: center; animation: pop 0.3s ease; }
         @keyframes pop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .modal-logo { width: 80px; margin-bottom: 15px; }
         .modal-text { color: #444; font-size: 1.1rem; margin-bottom: 20px; line-height: 1.4; }
+
+        /* Estilo das Observações */
+        #secaoObs { background: #fff1f2; border: 1px solid #fecaca; padding: 12px; border-radius: 12px; margin-top: 15px; text-align: left; display: none; }
     </style>
 </head>
 <body>
@@ -77,6 +80,11 @@
             </thead>
             <tbody id="corpoBalanço"></tbody>
         </table>
+
+        <div id="secaoObs">
+            <p style="margin:0; font-weight:bold; color:#be123c; font-size:0.8rem;">⚠️ OBSERVAÇÕES DA LOJA:</p>
+            <div id="textoObs" style="font-size:0.85rem; color:#444; margin-top:5px; line-height:1.4;"></div>
+        </div>
         
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:20px;">
             <button class="btn-main" style="background:#10b981; font-size: 0.8rem;" onclick="gerarPDF()">📄 PDF</button>
@@ -85,12 +93,20 @@
         <button class="btn-main" style="background:#64748b; margin-top:10px;" onclick="carregar()">🔄 ATUALIZAR</button>
     </div>
 
+    <div id="modalSucesso" class="modal-overlay">
+        <div class="modal-content">
+            <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" class="modal-logo">
+            <div id="modalSucessoTexto" class="modal-text"></div>
+            <button class="btn-main" onclick="fecharModalSucesso()">ENVIADO</button>
+        </div>
+    </div>
+
     <div id="modalConfirmar" class="modal-overlay">
         <div class="modal-content">
             <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" class="modal-logo">
             <div class="modal-text"><b>Deseja realmente encerrar o caixa agora?</b><br><small>Esta ação zerará o balanço atual.</small></div>
             <button class="btn-main" style="background:var(--danger)" onclick="executarFechamento()">SIM, CONFIRMAR FECHAMENTO</button>
-            <button class="btn-novo-item" style="width:100%; padding:12px; margin-top:10px;" onclick="fecharModais()">CANCELAR</button>
+            <button class="btn-novo-item" style="width:100%; padding:12px; margin-top:10px;" onclick="document.getElementById('modalConfirmar').style.display='none'">CANCELAR</button>
         </div>
     </div>
 
@@ -106,18 +122,27 @@
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwymkSXlXjQj27nWokMK9nNSystwUnDXCUqV_b2QcfDRCswl_DhTDJ06ozslFf_FA1h/exec";
         const itensFixos = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
         const mensagens = ["Tudo posso naquele que me fortalece. (Filipenses 4:13)", "O Senhor é o meu pastor, nada me faltará. (Salmo 23:1)", "A alegria do Senhor é a vossa força. (Neemias 8:10)", "Em tudo dai graças. (1 Tessalonicenses 5:18)", "Seja forte e corajoso! (Josué 1:9)"];
+        let obsFinal = "";
 
         function toggleLista() {
             const lista = document.getElementById('listaProducao');
-            const btn = document.getElementById('btnToggleLista');
             const isAberto = lista.style.display === 'block';
             lista.style.display = isAberto ? 'none' : 'block';
-            btn.querySelector('span').innerText = isAberto ? '▼' : '▲';
+            document.getElementById('btnToggleLista').querySelector('span').innerText = isAberto ? '▼' : '▲';
         }
 
         function toggleNovoItem() {
             const c = document.getElementById('containerNovo');
             c.style.display = (c.style.display === 'block') ? 'none' : 'block';
+        }
+
+        function abrirModalSucesso(texto) {
+            document.getElementById('modalSucessoTexto').innerHTML = texto;
+            document.getElementById('modalSucesso').style.display = 'flex';
+        }
+
+        function fecharModalSucesso() {
+            document.getElementById('modalSucesso').style.display = 'none';
         }
 
         function renderizarLista() {
@@ -134,59 +159,75 @@
         async function enviarMassa() {
             const inputs = Array.from(document.querySelectorAll('.q-massa')).filter(i => i.value !== "" && i.value > 0);
             if(inputs.length === 0) return alert("Preencha as quantidades!");
+            
             const btn = document.getElementById('btnMassa');
             btn.innerText = "ENVIANDO..."; btn.disabled = true;
+
             for(const input of inputs) {
                 await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "envio", produto: input.dataset.p, qtd: parseInt(input.value) })});
             }
-            alert("Sucesso!"); toggleLista();
-            inputs.forEach(i => i.value = ""); btn.innerText = "REGISTRAR SELECIONADOS"; btn.disabled = false;
+
+            abrirModalSucesso("<b>Produção registrada com sucesso!</b><br>Os itens foram adicionados ao balanço.");
+            toggleLista();
+            inputs.forEach(i => i.value = ""); 
+            btn.innerText = "REGISTRAR SELECIONADOS"; btn.disabled = false;
             carregar();
         }
 
         async function enviarNovo() {
             const p = document.getElementById('nome_novo').value, q = document.getElementById('q_novo').value;
             if(!p || !q) return alert("Preencha tudo!");
+            
             await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "envio", produto: p, qtd: parseInt(q) })});
-            alert("Item extra registrado!");
+            
+            abrirModalSucesso(`<b>${p}</b> registrado com sucesso!`);
             document.getElementById('nome_novo').value = ""; document.getElementById('q_novo').value = "";
             toggleNovoItem(); carregar();
         }
 
         async function carregar() {
-            const corpo = document.getElementById('corpoBalanço');
-            corpo.innerHTML = "<tr><td colspan='4'>Carregando...</td></tr>";
             try {
                 const res = await fetch(SCRIPT_URL);
                 const rows = await res.json();
                 const resumo = {};
+                obsFinal = ""; // Limpa obs
+                
                 itensFixos.forEach(f => resumo[f] = {e:0, s:0});
+                
                 rows.slice(1).forEach(r => {
-                    const tipo = r[1], prod = r[2], qtd = parseInt(r[3]) || 0;
+                    const tipo = r[1], prod = r[2], qtd = parseInt(r[3]) || 0, obs = r[5] || "";
                     if(!resumo[prod]) resumo[prod] = {e:0, s:0};
                     if(tipo === "ENVIO") resumo[prod].e += qtd;
-                    if(tipo === "SOBRA") resumo[prod].s += qtd;
+                    if(tipo === "SOBRA") {
+                        resumo[prod].s += qtd;
+                        if(obs) obsFinal += `• ${obs}<br>`;
+                    }
                 });
+
+                const corpo = document.getElementById('corpoBalanço');
                 corpo.innerHTML = "";
                 for(let p in resumo) {
                     const v = resumo[p].e - resumo[p].s;
-                    if(itensFixos.includes(p) || resumo[p].e > 0 || resumo[p].s > 0) {
-                        corpo.innerHTML += `<tr style="border-bottom:1px solid #eee;"><td style="text-align:left; padding:10px;">${p}</td><td>${resumo[p].e}</td><td>${resumo[p].s}</td><td style="font-weight:bold;color:${v>0?'green':'black'}">${v>0?v:0}</td></tr>`;
+                    if(itensFixos.includes(p) || resumo[p].e > 0) {
+                        corpo.innerHTML += `<tr style="border-bottom:1px solid #eee;"><td style="text-align:left; padding:10px;">${p}</td><td>${resumo[p].e}</td><td>${resumo[p].s}</td><td style="font-weight:bold;">${v>0?v:0}</td></tr>`;
                     }
+                }
+
+                // Mostrar Observações
+                const divObs = document.getElementById('secaoObs');
+                if(obsFinal) {
+                    divObs.style.display = 'block';
+                    document.getElementById('textoObs').innerHTML = obsFinal;
+                } else {
+                    divObs.style.display = 'none';
                 }
             } catch(e) { console.error(e); }
         }
 
-        function abrirConfirmacao() {
-            document.getElementById('modalConfirmar').style.display = 'flex';
-        }
-
-        function fecharModais() {
-            document.getElementById('modalConfirmar').style.display = 'none';
-        }
+        function abrirConfirmacao() { document.getElementById('modalConfirmar').style.display = 'flex'; }
 
         async function executarFechamento() {
-            fecharModais();
+            document.getElementById('modalConfirmar').style.display = 'none';
             await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "fechar" })});
             const msg = mensagens[Math.floor(Math.random() * mensagens.length)];
             document.getElementById('textoBiblico').innerText = msg;
@@ -196,13 +237,23 @@
         function gerarPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            doc.text("Gullas - Balanço do Dia - " + new Date().toLocaleDateString(), 14, 15);
+            doc.text("Gullas - Relatorio de Producao e Sobras", 14, 15);
             doc.autoTable({ html: '#tabelaVendas', startY: 25, theme: 'grid', headStyles: {fillColor: [245, 158, 11]} });
-            doc.save("Gullas_Relatorio.pdf");
+            
+            if(obsFinal) {
+                const y = doc.lastAutoTable.finalY + 10;
+                doc.setTextColor(200, 0, 0);
+                doc.text("OBSERVAÇÕES DA LOJA:", 14, y);
+                doc.setTextColor(0, 0, 0);
+                doc.setFontSize(10);
+                const textoLimpo = obsFinal.replace(/<br>/g, '\n');
+                doc.text(textoLimpo, 14, y + 7);
+            }
+            
+            doc.save("Gullas_Balanço.pdf");
         }
 
-        renderizarLista();
-        carregar();
+        renderizarLista(); carregar();
     </script>
 </body>
 </html>
