@@ -1,9 +1,10 @@
 {
   "name": "Gullas ADM",
   "short_name": "GADM",
-  "description": "Painel de Administração Gullas",
-  "id": "/adm",
-  "start_url": "Indexadm.html",
+  "description": "Administração Gullas",
+  "id": "gullas-adm",
+  "start_url": "./Indexadm.html",
+  "scope": "./Indexadm.html",
   "display": "standalone",
   "background_color": "#f1f5f9",
   "theme_color": "#f59e0b",
