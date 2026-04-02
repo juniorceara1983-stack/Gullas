@@ -1,0 +1,14 @@
+{
+  "name": "Gullas Loja",
+  "short_name": "GLoja",
+  "description": "Painel de Vendas Gullas",
+  "start_url": "Indexloja.html",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#f59e0b",
+  "icons": [{
+    "src": "https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png",
+    "sizes": "512x512",
+    "type": "image/png"
+  }]
+}
