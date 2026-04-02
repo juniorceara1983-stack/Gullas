@@ -21,33 +21,26 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="1774954149094.png" class="logo-img" onerror="this.style.display='none'">
-            <h2 style="margin:0; color:var(--primary);">CONFERÊNCIA</h2>
+            <h2 style="margin:0; color:var(--primary);">CONFERÊNCIA GULLAS</h2>
         </div>
-
         <select id="turnoSelect">
             <option value="Manhã">Turno: Manhã</option>
             <option value="Tarde">Turno: Tarde</option>
         </select>
-        
         <input type="text" id="nomeFunc" placeholder="Nome do Funcionário">
-
         <div id="listaItens"></div>
-
-        <label style="display:block; margin-top:15px; font-weight:bold;">Observações (Avarias/Vencimento):</label>
-        <textarea id="obs" rows="2" placeholder="Descreva aqui..."></textarea>
-
+        <label style="display:block; margin-top:15px; font-weight:bold;">Observações (Perdas/Avarias):</label>
+        <textarea id="obs" rows="2" placeholder="Descreva o ocorrido..."></textarea>
         <div class="photo-area" onclick="document.getElementById('inputFoto').click()">
-            <span id="txtFoto">📸 Foto da Ocorrência (Opcional)</span>
+            <span id="txtFoto">📸 Foto da Ocorrência</span>
             <input type="file" id="inputFoto" accept="image/*" style="display:none" onchange="processarFoto(this)">
             <img id="preview">
         </div>
-
-        <button id="btnEnviar" class="btn" onclick="enviarSobra()">ENVIAR PARA PLANILHA</button>
+        <button id="btnEnviar" class="btn" onclick="enviarSobra()">ENVIAR CONFERÊNCIA</button>
     </div>
 
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-Tx_2RqLERiALStmIUt_Q4CJICttL1ETNMhMIqs5E0_dywxs6sIMMXHfV0WisSMs8/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwymkSXlXjQj27nWokMK9nNSystwUnDXCUqV_b2QcfDRCswl_DhTDJ06ozslFf_FA1h/exec";
         const itensPadrao = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
         let fotoBase64 = "";
 
@@ -78,13 +71,11 @@
 
         async function enviarSobra() {
             const nome = document.getElementById('nomeFunc').value;
-            if(!nome) return alert("Por favor, digite seu nome.");
+            if(!nome) return alert("Digite seu nome!");
             const btn = document.getElementById('btnEnviar');
             btn.innerText = "ENVIANDO..."; btn.disabled = true;
-
             const itens = Array.from(document.querySelectorAll('.sobra-input'))
                 .filter(i => i.value !== "").map(i => ({ produto: i.dataset.prod, qtd: parseInt(i.value) }));
-
             try {
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
@@ -98,9 +89,9 @@
                         itens: itens
                     })
                 });
-                alert("Sucesso! Conferência registrada.");
+                alert("Enviado com sucesso!");
                 location.reload();
-            } catch (e) { alert("Erro de conexão."); btn.disabled = false; }
+            } catch (e) { alert("Erro ao enviar."); btn.disabled = false; }
         }
     </script>
 </body>
