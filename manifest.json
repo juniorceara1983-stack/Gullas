@@ -1,7 +1,7 @@
 {
-  "name": "Gullas Oficial",
+  "name": "Gullas Gestão",
   "short_name": "Gullas",
-  "description": "Sistema de Gestão Gullas",
+  "description": "Sistema de Produção e Sobras Gullas",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#f1f5f9",
