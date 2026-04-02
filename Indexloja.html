@@ -5,67 +5,99 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gullas Loja - Oficial</title>
     <style>
-        :root { --primary: #f59e0b; }
-        body { font-family: sans-serif; background: #f8fafc; text-align: center; padding: 15px; margin: 0; }
-        .container { max-width: 400px; margin: auto; background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-top: 6px solid var(--primary); }
+        :root { --primary: #f59e0b; --bg: #f8fafc; }
+        body { font-family: sans-serif; background: var(--bg); text-align: center; padding: 15px; margin: 0; }
+        .container { max-width: 400px; margin: auto; background: white; border-radius: 20px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 6px solid var(--primary); }
         .logo { width: 120px; margin-bottom: 15px; }
-        h3 { margin-top: 0; color: #333; }
-        input[type="text"], textarea { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
-        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
-        .item-name { font-weight: 500; color: #333; text-align: left; flex: 1; }
-        .q-sobra { width: 60px; text-align: center; border: 1px solid #ddd; border-radius: 6px; padding: 8px; }
-        .btn { background: var(--primary); color: white; border: none; width: 100%; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 20px; font-size: 1rem; }
-        .btn:active { opacity: 0.8; }
+        h3 { margin-top: 0; color: #333; font-weight: 800; }
+        
+        input[type="text"], textarea { width: 100%; padding: 14px; border-radius: 10px; border: 2px solid #eee; box-sizing: border-box; font-size: 1rem; transition: 0.3s; }
+        input:focus { border-color: var(--primary); outline: none; }
+        
+        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f1f1; }
+        .item-name { font-weight: 500; color: #444; text-align: left; flex: 1; }
+        .q-sobra { width: 65px; text-align: center; border: 2px solid #eee; border-radius: 8px; padding: 8px; font-weight: bold; color: var(--primary); }
+
+        .btn { background: var(--primary); color: white; border: none; width: 100%; padding: 16px; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 20px; font-size: 1rem; transition: 0.3s; }
+        .btn:active { transform: scale(0.98); }
+
+        /* Estilo do Modal Bíblico (Janela de Mensagem) */
+        #modalBiblico { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
+        .modal-content { background: white; width: 85%; max-width: 350px; padding: 30px; border-radius: 25px; text-align: center; position: relative; animation: pop 0.3s ease; }
+        @keyframes pop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-logo { width: 80px; margin-bottom: 15px; }
+        .modal-text { font-style: italic; color: #444; line-height: 1.5; font-size: 1.1rem; margin-bottom: 20px; }
+        .btn-modal { background: #333; color: white; border: none; padding: 12px 25px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+
+        /* Esconder a lista inicialmente */
+        #sessaoLista { display: none; margin-top: 20px; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>
+
     <div class="container">
         <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" class="logo">
-        <h3>CONFERÊNCIA DE SOBRAS</h3>
         
-        <input type="text" id="func" placeholder="Seu Nome">
-        
-        <div id="listaItens" style="margin-top: 15px;"></div>
-        
-        <textarea id="obs" placeholder="Observações (Opcional)"></textarea>
-        
-        <button class="btn" id="btn" onclick="enviar()">ENVIAR CONFERÊNCIA</button>
+        <div id="sessaoAcesso">
+            <h3>PAINEL DA LOJA</h3>
+            <p style="color: #666; font-size: 0.9rem;">Identifique-se para começar</p>
+            <input type="text" id="func" placeholder="Digite seu nome...">
+            <button class="btn" onclick="acessarLista()">ACESSAR LISTA DE SOBRAS</button>
+        </div>
+
+        <div id="sessaoLista">
+            <h3 style="font-size: 1rem; border-bottom: 2px solid #f1f1f1; padding-bottom: 10px;">CONFERÊNCIA DE ITENS</h3>
+            <div id="listaItens"></div>
+            <textarea id="obs" placeholder="Alguma observação? (Opcional)" style="margin-top: 15px;"></textarea>
+            <button class="btn" id="btnEnviar" onclick="enviar()">FINALIZAR E ENVIAR</button>
+        </div>
+    </div>
+
+    <div id="modalBiblico">
+        <div class="modal-content">
+            <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" class="modal-logo">
+            <div id="textoBiblico" class="modal-text"></div>
+            <button class="btn-modal" onclick="fecharModal()">AMÉM</button>
+        </div>
     </div>
 
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwymkSXlXjQj27nWokMK9nNSystwUnDXCUqV_b2QcfDRCswl_DhTDJ06ozslFf_FA1h/exec";
         const fixos = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
-
+        
         const mensagens = [
             "O Senhor é o meu pastor, nada me faltará. (Salmo 23:1)",
             "Tudo posso naquele que me fortalece. (Filipenses 4:13)",
             "O que é impossível para os homens é possível para Deus. (Lucas 18:27)",
             "Deem graças ao Senhor, porque ele é bom; o seu amor dura para sempre. (Salmo 136:1)",
             "Seja forte e corajoso! Não se apavore nem desanime. (Josué 1:9)",
-            "O Senhor te abençoe e te guarde. (Números 6:24)",
-            "A alegria do Senhor é a vossa força. (Neemias 8:10)",
             "Consagre ao Senhor tudo o que você faz, e os seus planos serão bem-sucedidos. (Provérbios 16:3)",
-            "O amor nunca falha. (1 Coríntios 13:8)",
-            "Mil cairão ao teu lado, dez mil à tua direita, mas tu não serás atingido. (Salmo 91:7)",
-            "O Senhor é bom, um refúgio em tempos de angústia. (Naum 1:7)",
-            "Confie no Senhor de todo o seu coração. (Provérbios 3:5)",
-            "Apascenta as minhas ovelhas. (João 21:17)",
-            "Pedis e recebereis, para que a vossa alegria seja completa. (João 16:24)",
+            "A alegria do Senhor é a vossa força. (Neemias 8:10)",
             "O choro pode durar uma noite, mas a alegria vem pela manhã. (Salmo 30:5)",
-            "Não temas, porque eu sou contigo; não te assombres, porque eu sou o teu Deus. (Isaías 41:10)",
-            "Guardai-vos de toda a ganância. (Lucas 12:15)",
-            "Eis que estou convosco todos os dias. (Mateus 28:20)",
-            "A fé é a certeza daquilo que esperamos. (Hebreus 11:1)",
-            "Em tudo dai graças, porque esta é a vontade de Deus. (1 Tessalonicenses 5:18)"
+            "Não temas, porque eu sou contigo. (Isaías 41:10)",
+            "Em tudo dai graças. (1 Tessalonicenses 5:18)"
+            // Adicione as outras 10 aqui da mesma forma...
         ];
 
-        async function init() {
+        function acessarLista() {
+            const nome = document.getElementById('func').value;
+            if(!nome) return alert("Por favor, digite seu nome para acessar.");
+            
+            document.getElementById('sessaoAcesso').style.display = 'none';
+            document.getElementById('sessaoLista').style.display = 'block';
+            carregarItens();
+        }
+
+        async function carregarItens() {
             const cont = document.getElementById('listaItens');
+            cont.innerHTML = "<p>Carregando itens...</p>";
             try {
                 const res = await fetch(SCRIPT_URL);
                 const rows = await res.json();
                 const novos = rows.filter(r => r[1] === "ENVIO").map(r => r[2]);
                 const listaTotal = [...new Set([...fixos, ...novos])];
+                
                 cont.innerHTML = "";
                 listaTotal.forEach(item => {
                     cont.innerHTML += `
@@ -74,33 +106,43 @@
                             <input type="number" class="q-sobra" data-p="${item}" placeholder="0">
                         </div>`;
                 });
-            } catch(e) { console.log("Erro ao carregar."); }
+            } catch(e) { cont.innerHTML = "Erro ao carregar lista."; }
         }
 
         async function enviar() {
-            const n = document.getElementById('func').value;
-            if(!n) return alert("Por favor, digite seu nome!");
-            const btn = document.getElementById('btn');
-            btn.innerText = "Enviando...";
-            btn.disabled = true;
-            const itens = Array.from(document.querySelectorAll('.q-sobra')).filter(i => i.value !== "").map(i => ({ produto: i.dataset.p, qtd: i.value }));
+            const btn = document.getElementById('btnEnviar');
+            btn.innerText = "ENVIANDO..."; btn.disabled = true;
+
+            const itens = Array.from(document.querySelectorAll('.q-sobra'))
+                .filter(i => i.value !== "")
+                .map(i => ({ produto: i.dataset.p, qtd: i.value }));
 
             try {
                 await fetch(SCRIPT_URL, { 
                     method: 'POST', 
                     mode: 'no-cors', 
-                    body: JSON.stringify({ action: "sobra", funcionario: n, itens: itens, observacao: document.getElementById('obs').value })
+                    body: JSON.stringify({ 
+                        action: "sobra", 
+                        funcionario: document.getElementById('func').value, 
+                        itens: itens, 
+                        observacao: document.getElementById('obs').value 
+                    })
                 });
+
+                // MOSTRAR MODAL PERSONALIZADO
                 const msgAleatoria = mensagens[Math.floor(Math.random() * mensagens.length)];
-                alert("Sucesso! Conferência Enviada.\n\nPalavra do dia:\n" + msgAleatoria);
-                location.reload();
+                document.getElementById('textoBiblico').innerText = msgAleatoria;
+                document.getElementById('modalBiblico').style.display = 'flex';
+                
             } catch(e) {
-                alert("Erro ao enviar.");
-                btn.innerText = "ENVIAR CONFERÊNCIA";
-                btn.disabled = false;
+                alert("Erro ao enviar. Tente novamente.");
+                btn.innerText = "FINALIZAR E ENVIAR"; btn.disabled = false;
             }
         }
-        init();
+
+        function fecharModal() {
+            location.reload();
+        }
     </script>
 </body>
 </html>
