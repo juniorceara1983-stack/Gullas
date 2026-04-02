@@ -3,172 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gullas ADM - Painel de Controle</title>
+    <title>Gullas ADM</title>
     <style>
-        :root { --primary: #f59e0b; --secondary: #1e293b; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; margin: 0; padding: 10px; }
-        #loginOverlay { position: fixed; inset:0; background: var(--secondary); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-        .card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        h2 { font-size: 1rem; color: var(--primary); border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; margin: 0 0 15px 0; }
-        .row { display: flex; gap: 10px; margin-bottom: 15px; }
-        select, input { padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; flex: 1; font-size: 1rem; }
-        .btn { padding: 14px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.3s; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-add-item { background: #10b981; color: white; margin-top: 10px; font-size: 0.8rem; padding: 8px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
-        th { text-align: left; color: #64748b; padding-bottom: 10px; border-bottom: 2px solid #f1f5f9; }
-        td { padding: 12px 5px; border-top: 1px solid #f1f5f9; text-align: center; }
-        .badge-venda { background: #dcfce7; color: #16a34a; padding: 4px 8px; border-radius: 6px; font-weight: bold; }
+        :root { --primary: #f59e0b; --dark: #1e293b; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; padding: 10px; margin: 0; }
+        .card { background: white; border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .row { display: flex; gap: 8px; margin-bottom: 10px; }
+        input, select { padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; flex: 1; }
+        .btn { padding: 12px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; }
+        .btn-orange { background: var(--primary); color: white; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; }
+        th { text-align: left; padding: 10px; border-bottom: 2px solid #f1f5f9; color: #64748b; }
+        td { padding: 10px; border-bottom: 1px solid #f1f5f9; text-align: center; }
     </style>
 </head>
 <body>
 
-    <div id="loginOverlay">
-        <div style="background:white; padding:30px; border-radius:20px; text-align:center; width:80%;">
-            <h2 style="color:var(--secondary)">ACESSO GULLAS ADM</h2>
-            <input type="password" id="pass" placeholder="Senha" style="width:100%; margin-bottom:15px;">
-            <button class="btn btn-primary" onclick="checkLogin()">ENTRAR</button>
+    <div class="card">
+        <h3 style="margin-top:0;">✨ Cadastrar Item Novo</h3>
+        <div class="row">
+            <input type="text" id="novoItem" placeholder="Ex: Coxinha">
+            <button class="btn btn-orange" style="width:100px" onclick="addAoCardapio()">ADD</button>
         </div>
     </div>
 
-    <div id="mainAdm" style="display:none;">
-        
-        <div class="card">
-            <h2>✨ Cadastrar Novo Produto</h2>
-            <div class="row">
-                <input type="text" id="novoItemNome" placeholder="Nome do Produto (ex: Coxinha)">
-                <button class="btn btn-add-item" style="width: 100px;" onclick="cadastrarNovoItem()">SALVAR</button>
-            </div>
+    <div class="card">
+        <h3 style="margin-top:0;">🚚 Enviar para Loja</h3>
+        <div class="row">
+            <select id="selProd"></select>
+            <input type="number" id="qtdEnvio" style="width:80px" placeholder="Qtd">
         </div>
+        <button class="btn btn-orange" onclick="enviarParaLoja()">REGISTRAR SAÍDA</button>
+    </div>
 
-        <div class="card">
-            <h2>🚚 Registrar Remessa para Loja</h2>
-            <div class="row">
-                <select id="prodSelect"></select>
-                <input type="number" id="qtdAdd" style="width:80px" placeholder="Qtd">
-            </div>
-            <button class="btn btn-primary" onclick="addEnvio()">ENVIAR PARA LOJA</button>
-        </div>
-
-        <div class="card">
-            <h2>📊 Balanço de Hoje (Vendas Reais)</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th style="text-align:left">PRODUTO</th>
-                        <th>ENVIO</th>
-                        <th>SOBRA</th>
-                        <th>VENDAS</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody"></tbody>
-            </table>
-            <button class="btn" style="background:var(--secondary); color:white; margin-top:20px;" onclick="carregarRelatorio()">🔄 ATUALIZAR DADOS</button>
-        </div>
+    <div class="card">
+        <h3 style="margin-top:0;">📊 Vendas (Balanço)</h3>
+        <table id="relatorio">
+            <thead>
+                <tr><th style="text-align:left">Produto</th><th>Envio</th><th>Sobra</th><th>Venda</th></tr>
+            </thead>
+            <tbody id="corpoTabela"></tbody>
+        </table>
+        <button class="btn" style="background:#64748b; color:white; margin-top:15px;" onclick="carregarDados()">🔄 ATUALIZAR TABELA</button>
     </div>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzip6qASNtkcRNBWMINpQWVoxU71AL0Ajws_BmzobGdEBA23fa0-WvqX3GjIZf_me_1/exec";
-    
-    // Agora o cardápio começa com seus itens base, mas pode aumentar
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-Tx_2RqLERiALStmIUt_Q4CJICttL1ETNMhMIqs5E0_dywxs6sIMMXHfV0WisSMs8/exec";
     let cardapio = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
 
-    function checkLogin() {
-        if(document.getElementById('pass').value === "389180") {
-            document.getElementById('loginOverlay').style.display = "none";
-            document.getElementById('mainAdm').style.display = "block";
-            atualizarSelect();
-            carregarRelatorio();
-        } else { alert("Senha Incorreta!"); }
-    }
-
-    // Função para adicionar item novo na lista temporária do sistema
-    function cadastrarNovoItem() {
-        const nome = document.getElementById('novoItemNome').value.trim();
-        if(!nome) return alert("Digite o nome do produto!");
-        
-        if(cardapio.includes(nome)) {
-            return alert("Este item já existe na lista!");
-        }
-
-        cardapio.push(nome);
-        atualizarSelect();
-        document.getElementById('novoItemNome').value = "";
-        alert(nome + " adicionado à lista de hoje!");
-    }
-
     function atualizarSelect() {
-        const sel = document.getElementById('prodSelect');
-        sel.innerHTML = "";
-        cardapio.forEach(p => { sel.innerHTML += `<option value="${p}">${p}</option>`; });
+        const s = document.getElementById('selProd');
+        s.innerHTML = "";
+        cardapio.forEach(p => s.innerHTML += `<option value="${p}">${p}</option>`);
     }
 
-    async function addEnvio() {
-        const p = document.getElementById('prodSelect').value;
-        const q = parseInt(document.getElementById('qtdAdd').value);
-        if(!q) return alert("Informe a quantidade!");
+    function addAoCardapio() {
+        const n = document.getElementById('novoItem').value;
+        if(!n) return;
+        cardapio.push(n);
+        atualizarSelect();
+        document.getElementById('novoItem').value = "";
+        alert("Item adicionado à lista!");
+    }
+
+    async function enviarParaLoja() {
+        const p = document.getElementById('selProd').value;
+        const q = document.getElementById('qtdEnvio').value;
+        if(!q) return alert("Digite a quantidade!");
 
         await fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
             body: JSON.stringify({ action: "envio", produto: p, qtd: q })
         });
-        alert("Envio registrado!");
-        document.getElementById('qtdAdd').value = "";
-        carregarRelatorio();
+        alert("Enviado!");
+        carregarDados();
     }
 
-    async function carregarRelatorio() {
-        const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = "<tr><td colspan='4'>Sincronizando...</td></tr>";
-
+    async function carregarDados() {
+        const t = document.getElementById('corpoTabela');
+        t.innerHTML = "<tr><td colspan='4'>Buscando...</td></tr>";
         try {
-            const response = await fetch(SCRIPT_URL);
-            const rows = await response.json();
-            
-            const consolidado = {};
-            
-            // Garantir que todos os itens do cardápio atual apareçam no relatório
-            cardapio.forEach(p => consolidado[p] = { envio: 0, sobra: 0 });
+            const res = await fetch(SCRIPT_URL);
+            const rows = await res.json();
+            const resumo = {};
+            cardapio.forEach(p => resumo[p] = {e:0, s:0});
 
-            if (rows.length > 1) {
-                rows.slice(1).forEach(row => {
-                    const tipo = row[1]; 
-                    const prod = row[2]; 
-                    const qtd = parseInt(row[3]) || 0;
-
-                    // Se aparecer um produto na planilha que não está no cardápio local, a gente adiciona
-                    if (!consolidado[prod]) {
-                        consolidado[prod] = { envio: 0, sobra: 0 };
-                        if(!cardapio.includes(prod)) {
-                            cardapio.push(prod);
-                            atualizarSelect();
-                        }
-                    }
-
-                    if (tipo === "ENVIO") consolidado[prod].envio += qtd;
-                    if (tipo === "SOBRA") consolidado[prod].sobra += qtd;
-                });
-            }
-
-            tbody.innerHTML = "";
-            // Ordenar por quem tem mais venda
-            Object.keys(consolidado).forEach(p => {
-                const env = consolidado[p].envio;
-                const sob = consolidado[p].sobra;
-                const ven = env - sob;
-                if(env > 0 || sob > 0) {
-                    tbody.innerHTML += `
-                        <tr>
-                            <td style="text-align:left; font-weight:600;">${p}</td>
-                            <td>${env}</td>
-                            <td>${sob}</td>
-                            <td><span class="badge-venda">${ven >= 0 ? ven : 0}</span></td>
-                        </tr>`;
-                }
+            rows.slice(1).forEach(r => {
+                const tipo = r[1], prod = r[2], qtd = parseInt(r[3])||0;
+                if(!resumo[prod]) resumo[prod] = {e:0, s:0};
+                if(tipo === "ENVIO") resumo[prod].e += qtd;
+                if(tipo === "SOBRA") resumo[prod].s += qtd;
             });
-        } catch (e) { tbody.innerHTML = "<tr><td colspan='4'>Erro na conexão.</td></tr>"; }
+
+            t.innerHTML = "";
+            for(let p in resumo) {
+                const v = resumo[p].e - resumo[p].s;
+                if(resumo[p].e > 0 || resumo[p].s > 0) {
+                    t.innerHTML += `<tr><td style="text-align:left">${p}</td><td>${resumo[p].e}</td><td>${resumo[p].s}</td><td style="color:#16a34a; font-weight:bold">${v > 0 ? v : 0}</td></tr>`;
+                }
+            }
+        } catch(e) { t.innerHTML = "Erro ao ler dados."; }
     }
+
+    atualizarSelect();
+    carregarDados();
 </script>
 </body>
 </html>
