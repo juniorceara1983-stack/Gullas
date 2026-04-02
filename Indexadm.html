@@ -3,131 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gullas ADM - Oficial</title>
+    <title>Gullas ADM - Gestão</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <style>
-        :root { --primary: #f59e0b; }
+        :root { --primary: #f59e0b; --secondary: #10b981; --danger: #ef4444; }
         body { font-family: sans-serif; background: #f1f5f9; text-align: center; padding: 15px; margin: 0; }
-        .logo { width: 120px; margin-bottom: 15px; }
-        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        h3 { margin-top: 0; color: #333; }
-        input { padding: 10px; border: 1px solid #ddd; border-radius: 8px; width: 100%; box-sizing: border-box; }
-        .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 10px; }
-        .btn:active { opacity: 0.8; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; background: white; }
-        th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: center; }
-        th { background: #f8fafc; color: #64748b; }
+        .logo { width: 110px; margin-bottom: 10px; }
+        .card { background: white; border-radius: 16px; padding: 18px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        h3 { margin: 0 0 15px 0; color: #1e293b; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; }
+        
+        select, input { padding: 14px; border: 2px solid #e2e8f0; border-radius: 12px; width: 100%; box-sizing: border-box; font-size: 1rem; margin-bottom: 12px; transition: 0.3s; }
+        select:focus, input:focus { border-color: var(--primary); outline: none; }
+        
+        .btn { border: none; padding: 15px; border-radius: 12px; font-weight: bold; width: 100%; cursor: pointer; transition: 0.2s; font-size: 0.95rem; }
+        .btn-primary { background: var(--primary); color: white; margin-top: 5px; }
+        .btn-add-item { background: #f8fafc; color: var(--primary); border: 2px dashed var(--primary); margin-bottom: 15px; }
+        .btn-pdf { background: var(--secondary); color: white; }
+        .btn-close { background: var(--danger); color: white; }
+        .btn:active { transform: scale(0.98); opacity: 0.9; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.85rem; }
+        th, td { padding: 12px 8px; border-bottom: 1px solid #f1f5f9; text-align: center; }
+        th { color: #64748b; font-weight: 600; }
         .text-left { text-align: left; }
-        .q-envio { width: 60px; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 5px; }
+        .item-novo-container { display: none; background: #fffbeb; padding: 15px; border-radius: 12px; border: 1px solid #fef3c7; margin-bottom: 15px; }
     </style>
 </head>
 <body>
     <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" class="logo">
     
     <div class="card">
-        <h3>🚚 Registrar Envio (Lista Pré-definida)</h3>
-        <table id="tabelaEnvio">
-            <thead>
-                <tr>
-                    <th class="text-left">Item</th>
-                    <th>Quantidade</th>
-                </tr>
-            </thead>
-            <tbody id="corpoEnvio">
-                </tbody>
-        </table>
-        <button class="btn" id="btnEnv" onclick="enviarVarios()">REGISTRAR ENVIOS</button>
+        <h3>🚚 Controle de Produção</h3>
+        
+        <button class="btn btn-add-item" id="btnToggle" onclick="toggleNovoItem()">+ ADICIONAR NOVO ITEM</button>
+
+        <div id="containerNovo" class="item-novo-container">
+            <input type="text" id="nome_novo" placeholder="Nome do novo produto">
+            <button class="btn btn-primary" style="background:#475569" onclick="confirmarNovo()">OK, USAR ESTE</button>
+        </div>
+
+        <select id="p_lista">
+            <option value="" disabled selected>Selecionar Item...</option>
+            <option value="Massa Quente">Massa Quente</option>
+            <option value="Massa Fria">Massa Fria</option>
+            <option value="Massa Forno">Massa Forno</option>
+            <option value="Bolos (inteiros)">Bolos (inteiros)</option>
+            <option value="Suco Galao">Suco Galao</option>
+            <option value="Empadas">Empadas</option>
+            <option value="Tortas">Tortas</option>
+            <option value="Pastel">Pastel</option>
+            </select>
+        
+        <input type="number" id="q_envio" placeholder="Quantidade Produzida">
+        <button class="btn btn-primary" id="btnEnv" onclick="enviarProducao()">REGISTRAR ENVIO</button>
     </div>
 
     <div class="card">
-        <h3>➕ Adicionar Item Novo</h3>
-        <input type="text" id="p_novo" placeholder="Nome do Produto Novo">
-        <input type="number" id="q_novo" placeholder="Quantidade" style="margin-top: 10px;">
-        <button class="btn" style="background: #64748b;" onclick="enviarNovo()">ADICIONAR E ENVIAR</button>
-    </div>
-
-    <div class="card">
-        <h3>📊 Balanço Atual</h3>
+        <h3>📊 Balanço de Vendas</h3>
         <table id="tabelaVendas">
             <thead>
-                <tr>
-                    <th class="text-left">Item</th>
-                    <th>Env</th>
-                    <th>Sob</th>
-                    <th>Ven</th>
-                </tr>
+                <tr><th class="text-left">Item</th><th>Env</th><th>Sob</th><th>Ven</th></tr>
             </thead>
             <tbody id="corpoBalanço"></tbody>
         </table>
         
-        <div style="display:flex; gap:10px; margin-top:15px;">
-            <button class="btn" style="background:#10b981" onclick="gerarPDF()">📄 PDF</button>
-            <button class="btn" style="background:#ef4444" onclick="fecharCaixa()">🔒 FECHAR CX</button>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:20px;">
+            <button class="btn btn-pdf" onclick="gerarPDF()">📄 PDF</button>
+            <button class="btn btn-close" onclick="fecharCaixa()">🔒 FECHAR CX</button>
         </div>
-        <button class="btn" style="background:#64748b; margin-top:10px;" onclick="carregar()">🔄 ATUALIZAR</button>
+        <button class="btn" style="background:#64748b; color:white; margin-top:10px;" onclick="carregar()">🔄 ATUALIZAR</button>
     </div>
 
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwymkSXlXjQj27nWokMK9nNSystwUnDXCUqV_b2QcfDRCswl_DhTDJ06ozslFf_FA1h/exec";
         const itensFixos = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
 
-        // Gera a tabela de envio com os itens fixos
-        function gerarTabelaEnvio() {
-            const corpo = document.getElementById('corpoEnvio');
-            itensFixos.forEach(item => {
-                corpo.innerHTML += `
-                    <tr>
-                        <td class="text-left">${item}</td>
-                        <td><input type="number" class="q-envio" data-p="${item}" placeholder="0"></td>
-                    </tr>`;
-            });
+        function toggleNovoItem() {
+            const c = document.getElementById('containerNovo');
+            c.style.display = (c.style.display === 'block') ? 'none' : 'block';
         }
 
-        async function enviarVarios() {
-            const inputs = Array.from(document.querySelectorAll('.q-envio')).filter(i => i.value !== "" && i.value > 0);
-            if(inputs.length === 0) return alert("Preencha a quantidade de pelo menos um item.");
+        function confirmarNovo() {
+            const nome = document.getElementById('nome_novo').value;
+            if(!nome) return alert("Digite o nome do produto");
+            const select = document.getElementById('p_lista');
+            
+            // Adiciona na lista de seleção na hora
+            const opt = document.createElement('option');
+            opt.value = nome; opt.text = nome; opt.selected = true;
+            select.add(opt);
+            
+            document.getElementById('containerNovo').style.display = 'none';
+            document.getElementById('nome_novo').value = "";
+        }
+
+        async function enviarProducao() {
+            const produto = document.getElementById('p_lista').value;
+            const qtd = document.getElementById('q_envio').value;
+
+            if(!produto || !qtd) return alert("Selecione o produto e a quantidade!");
             
             const btn = document.getElementById('btnEnv');
             btn.innerText = "ENVIANDO..."; btn.disabled = true;
 
-            // Envia cada item preenchido
-            for(const input of inputs) {
-                await fetch(SCRIPT_URL, { 
-                    method: 'POST', 
-                    mode: 'no-cors', 
-                    body: JSON.stringify({ action: "envio", produto: input.dataset.p, qtd: parseInt(input.value) })
-                });
-            }
+            await fetch(SCRIPT_URL, { 
+                method: 'POST', 
+                mode: 'no-cors', 
+                body: JSON.stringify({ action: "envio", produto: produto, qtd: parseInt(qtd) })
+            });
             
-            alert("Envios registrados!");
-            inputs.forEach(i => i.value = ""); // Limpa os campos
-            btn.innerText = "REGISTRAR ENVIOS"; btn.disabled = false;
-            carregar();
-        }
-
-        async function enviarNovo() {
-            const p = document.getElementById('p_novo').value;
-            const q = document.getElementById('q_novo').value;
-            if(!p || !q) return alert("Preencha produto e quantidade!");
-            await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "envio", produto: p, qtd: parseInt(q) })});
-            alert("Item novo enviado!");
-            document.getElementById('p_novo').value = ""; document.getElementById('q_novo').value = "";
+            alert("Sucesso! O item já está disponível na loja.");
+            document.getElementById('q_envio').value = "";
+            btn.innerText = "REGISTRAR ENVIO"; btn.disabled = false;
             carregar();
         }
 
         async function carregar() {
             const corpo = document.getElementById('corpoBalanço');
-            corpo.innerHTML = "<tr><td colspan='4'>Buscando...</td></tr>";
+            corpo.innerHTML = "<tr><td colspan='4'>Carregando...</td></tr>";
             try {
                 const res = await fetch(SCRIPT_URL);
                 const rows = await res.json();
                 const resumo = {};
+                const select = document.getElementById('p_lista');
+
                 itensFixos.forEach(f => resumo[f] = {e:0, s:0});
 
                 rows.slice(1).forEach(r => {
                     const tipo = r[1], prod = r[2], qtd = parseInt(r[3]) || 0;
-                    if(!resumo[prod]) resumo[prod] = {e:0, s:0};
+                    if(!resumo[prod]) {
+                        resumo[prod] = {e:0, s:0};
+                        // Adiciona itens novos que já estão na planilha à lista de seleção
+                        if(!itensFixos.includes(prod)){
+                            let existe = Array.from(select.options).some(opt => opt.value === prod);
+                            if(!existe) {
+                                const opt = document.createElement('option');
+                                opt.value = prod; opt.text = prod;
+                                select.add(opt);
+                            }
+                        }
+                    }
                     if(tipo === "ENVIO") resumo[prod].e += qtd;
                     if(tipo === "SOBRA") resumo[prod].s += qtd;
                 });
@@ -136,4 +152,27 @@
                 for(let p in resumo) {
                     const v = resumo[p].e - resumo[p].s;
                     if(itensFixos.includes(p) || resumo[p].e > 0 || resumo[p].s > 0) {
-                        corpo.innerHTML += `<tr><td class="text-left">${p}</td><td>${resumo[p].e}</td><td>${resumo[p].s}</td><td style="font-weight:bold;color:${v>0?'green':'black'}">${v>0?v
+                        corpo.innerHTML += `<tr><td class="text-left">${p}</td><td>${resumo[p].e}</td><td>${resumo[p].s}</td><td style="font-weight:bold;color:${v>0?'green':'black'}">${v>0?v:0}</td></tr>`;
+                    }
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function fecharCaixa() {
+            if(!confirm("Zerar produção e balanço?")) return;
+            await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "fechar" })});
+            location.reload();
+        }
+
+        function gerarPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text("Gullas - Produção e Vendas - " + new Date().toLocaleDateString(), 14, 15);
+            doc.autoTable({ html: '#tabelaVendas', startY: 25, theme: 'grid', headStyles: {fillColor: [245, 158, 11]} });
+            doc.save("Gullas_Relatorio.pdf");
+        }
+
+        carregar();
+    </script>
+</body>
+</html>
