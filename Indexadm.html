@@ -3,51 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gullas ADM</title>
+    <title>Gullas ADM - Gestão</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <style>
         :root { --primary: #f59e0b; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; padding: 15px; text-align: center; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; padding: 15px; text-align: center; margin: 0; }
         #login { position: fixed; inset: 0; background: white; display: flex; align-items: center; justify-content: center; z-index: 1000; flex-direction: column; }
         .card { background: white; border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         input, select { padding: 12px; border: 1px solid #ddd; border-radius: 10px; width: 100%; margin-bottom: 10px; box-sizing: border-box; }
-        .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 10px; border-bottom: 1px solid #eee; font-size: 0.85rem; }
-        .img-preview { width: 50px; height: 50px; object-fit: cover; border-radius: 5px; cursor: pointer; }
+        .btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
+        th, td { padding: 10px; border-bottom: 1px solid #eee; font-size: 0.85rem; text-align: center; }
+        .badge-obs { background: #fef3c7; border-left: 4px solid var(--primary); padding: 10px; margin-top: 10px; text-align: left; font-size: 0.85rem; border-radius: 4px; }
+        .img-preview { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-top: 5px; cursor: pointer; border: 1px solid #ddd; }
     </style>
 </head>
 <body>
+
     <div id="login">
         <img src="https://github.com/joscelis/gullas/blob/main/1774954149094.png?raw=true" style="width:120px; margin-bottom:20px">
-        <input type="password" id="pass" placeholder="Senha ADM" style="width:200px;">
+        <input type="password" id="pass" placeholder="Senha ADM">
         <button class="btn" style="width:200px" onclick="entrar()">ENTRAR</button>
     </div>
 
     <div id="adm" style="display:none;">
-        <img src="https://github.com/joscelis/gullas/blob/main/1774954149094.png?raw=true" style="width:80px;">
+        <img src="https://github.com/joscelis/gullas/blob/main/1774954149094.png?raw=true" style="width:80px; margin-bottom:10px;">
         
         <div class="card">
-            <h3>🚚 Enviar Novo Produto</h3>
-            <div style="display:flex; gap:5px;">
-                <input type="text" id="novoItem" placeholder="Nome do item">
-                <input type="number" id="qtdEnvio" placeholder="Qtd" style="width:100px">
-            </div>
-            <button class="btn" onclick="enviar()">REGISTRAR E ENVIAR</button>
+            <h3>🚚 Produção / Envio</h3>
+            <input type="text" id="novoItem" placeholder="Nome do Produto">
+            <input type="number" id="qtdEnvio" placeholder="Quantidade">
+            <button class="btn" onclick="enviarEnvio()">REGISTRAR ENVIO</button>
         </div>
 
         <div class="card">
-            <h3>📊 Balanço e Relatório</h3>
-            <button class="btn" style="background:#10b981; margin-bottom:10px;" onclick="gerarPDF()">📄 BAIXAR PDF DAS VENDAS</button>
+            <h3>📊 Balanço de Vendas (Hoje)</h3>
             <table id="tabelaVendas">
-                <thead><tr><th style="text-align:left">Produto</th><th>Env</th><th>Sob</th><th>Venda</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th style="text-align:left">Produto</th>
+                        <th>Env</th>
+                        <th>Sob</th>
+                        <th>Venda</th>
+                    </tr>
+                </thead>
                 <tbody id="corpoBalanço"></tbody>
             </table>
-            <button class="btn" style="background:#64748b; margin-top:10px" onclick="carregarDados()">🔄 ATUALIZAR</button>
+            <div style="display:flex; gap:8px; margin-top:15px;">
+                <button class="btn" style="background:#10b981" onclick="gerarPDF()">📄 PDF</button>
+                <button class="btn" style="background:#ef4444" onclick="fecharCaixa()">🔒 FECHAR CAIXA</button>
+            </div>
+            <button class="btn" style="background:#64748b; margin-top:10px;" onclick="carregarDados()">🔄 ATUALIZAR LISTA</button>
         </div>
 
-        <div id="sessaoFotos"></div>
+        <div class="card" id="cardObs" style="display:none;">
+            <h3>📢 Ocorrências e Fotos</h3>
+            <div id="listaObs"></div>
+        </div>
     </div>
 
     <script>
@@ -58,47 +71,91 @@
                 document.getElementById('login').style.display = 'none';
                 document.getElementById('adm').style.display = 'block';
                 carregarDados();
-            } else { alert("Senha incorreta!"); }
+            } else { alert("Senha Incorreta!"); }
         }
 
-        async function enviar() {
-            const p = document.getElementById('novoItem').value, q = document.getElementById('qtdEnvio').value;
+        async function enviarEnvio() {
+            const p = document.getElementById('novoItem').value;
+            const q = document.getElementById('qtdEnvio').value;
             if(!p || !q) return alert("Preencha produto e quantidade!");
-            await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "envio", produto: p, qtd: q }) });
-            alert("Enviado com sucesso!");
-            document.getElementById('novoItem').value = ""; document.getElementById('qtdEnvio').value = "";
+            
+            const btn = event.target;
+            btn.innerText = "ENVIANDO..."; btn.disabled = true;
+
+            await fetch(SCRIPT_URL, { 
+                method: 'POST', 
+                mode: 'no-cors', 
+                body: JSON.stringify({ action: "envio", produto: p, qtd: q }) 
+            });
+
+            alert("Produto enviado para a loja!");
+            document.getElementById('novoItem').value = "";
+            document.getElementById('qtdEnvio').value = "";
+            btn.innerText = "REGISTRAR ENVIO"; btn.disabled = false;
             carregarDados();
         }
 
         async function carregarDados() {
             const corpo = document.getElementById('corpoBalanço');
+            const obsDiv = document.getElementById('listaObs');
             corpo.innerHTML = "<tr><td colspan='4'>Carregando...</td></tr>";
+            
             try {
                 const res = await fetch(SCRIPT_URL);
                 const rows = await res.json();
                 const resumo = {};
-                
+                let temObs = false;
+                obsDiv.innerHTML = "";
+
+                // Começa do index 1 para pular o cabeçalho
                 rows.slice(1).forEach(r => {
-                    const tipo = r[1], prod = r[2], qtd = parseInt(r[3])||0;
+                    const [data, tipo, prod, qtd, turno, func, obs, foto] = r;
+                    
                     if(!resumo[prod]) resumo[prod] = {e:0, s:0};
-                    if(tipo === "ENVIO") resumo[prod].e += qtd;
-                    if(tipo === "SOBRA") resumo[prod].s += qtd;
+                    if(tipo === "ENVIO") resumo[prod].e += parseInt(qtd);
+                    if(tipo === "SOBRA") resumo[prod].s += parseInt(qtd);
+
+                    if(obs || foto) {
+                        temObs = true;
+                        obsDiv.innerHTML += `
+                            <div class="badge-obs">
+                                <strong>${func} (${turno}):</strong> ${obs || "Apenas foto."}<br>
+                                ${foto ? `<a href="${foto}" target="_blank"><img src="${foto}" class="img-preview"></a>` : ""}
+                            </div>`;
+                    }
                 });
 
                 corpo.innerHTML = "";
                 for(let p in resumo) {
                     const v = resumo[p].e - resumo[p].s;
-                    corpo.innerHTML += `<tr><td style="text-align:left">${p}</td><td>${resumo[p].e}</td><td>${resumo[p].s}</td><td style="font-weight:bold;color:green">${v>0?v:0}</td></tr>`;
+                    corpo.innerHTML += `
+                        <tr>
+                            <td style="text-align:left">${p}</td>
+                            <td>${resumo[p].e}</td>
+                            <td>${resumo[p].s}</td>
+                            <td style="color:green; font-weight:bold;">${v > 0 ? v : 0}</td>
+                        </tr>`;
                 }
-            } catch(e) { corpo.innerHTML = "Erro ao carregar."; }
+                
+                document.getElementById('cardObs').style.display = temObs ? 'block' : 'none';
+
+            } catch(e) { corpo.innerHTML = "<tr><td colspan='4'>Erro ao ler dados.</td></tr>"; }
+        }
+
+        function fecharCaixa() {
+            if(confirm("Deseja fechar o caixa de hoje? O painel ficará limpo para novos registros amanhã.")) {
+                // A limpeza é automática pelo script porque ele filtra por data
+                location.reload();
+            }
         }
 
         function gerarPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            doc.text("Relatório Gullas - " + new Date().toLocaleDateString(), 14, 15);
-            doc.autoTable({ html: '#tabelaVendas', startY: 25 });
-            doc.save("Vendas_Gullas.pdf");
+            const dataRel = new Date().toLocaleDateString('pt-BR');
+            doc.text("Gullas - Relatório de Vendas: " + dataRel, 14, 15);
+            doc.autoTable({ html: '#tabelaVendas', startY: 25, theme: 'grid', headStyles: {fillColor: [245, 158, 11]} });
+            doc.save("Vendas_Gullas_" + dataRel + ".pdf");
         }
     </script>
 </body>
