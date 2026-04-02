@@ -1,0 +1,16 @@
+{
+  "name": "Gullas Oficial",
+  "short_name": "Gullas",
+  "description": "Sistema de Gestão Gullas",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#f1f5f9",
+  "theme_color": "#f59e0b",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
