@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gullas ADM - Gestão</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#f59e0b">
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+      }
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <style>
@@ -169,7 +177,6 @@
             } catch(e) { console.error(e); }
         }
 
-        // NOVO FLUXO DE FECHAMENTO
         function abrirConfirmacao() {
             document.getElementById('modalConfirmar').style.display = 'flex';
         }
@@ -180,10 +187,7 @@
 
         async function executarFechamento() {
             fecharModais();
-            // Inicia o processo no servidor
             await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "fechar" })});
-            
-            // Escolhe mensagem bíblica
             const msg = mensagens[Math.floor(Math.random() * mensagens.length)];
             document.getElementById('textoBiblico').innerText = msg;
             document.getElementById('modalBiblico').style.display = 'flex';
@@ -192,8 +196,8 @@
         function gerarPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            doc.text("Gullas - Balanço", 14, 15);
-            doc.autoTable({ html: '#tabelaVendas', startY: 25, theme: 'grid' });
+            doc.text("Gullas - Balanço do Dia - " + new Date().toLocaleDateString(), 14, 15);
+            doc.autoTable({ html: '#tabelaVendas', startY: 25, theme: 'grid', headStyles: {fillColor: [245, 158, 11]} });
             doc.save("Gullas_Relatorio.pdf");
         }
 
