@@ -1,9 +1,10 @@
 {
   "name": "Gullas Loja",
   "short_name": "GLoja",
-  "description": "Painel de Vendas Gullas",
-  "id": "/loja",
-  "start_url": "Indexloja.html",
+  "description": "Loja Gullas",
+  "id": "gullas-loja",
+  "start_url": "./Indexloja.html",
+  "scope": "./Indexloja.html",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#f59e0b",
