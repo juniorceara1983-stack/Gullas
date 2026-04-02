@@ -2,6 +2,7 @@
   "name": "Gullas Loja",
   "short_name": "GLoja",
   "description": "Painel de Vendas Gullas",
+  "id": "/loja",
   "start_url": "Indexloja.html",
   "display": "standalone",
   "background_color": "#f8fafc",
