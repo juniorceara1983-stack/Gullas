@@ -21,8 +21,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="1774954149094.png" class="logo-img">
-            <h2 style="margin:0; color:var(--primary);">CONFERÊNCIA GULLAS</h2>
+            <img src="1774954149094.png" class="logo-img" onerror="this.style.display='none'">
+            <h2 style="margin:0; color:var(--primary);">CONFERÊNCIA</h2>
         </div>
 
         <select id="turnoSelect">
@@ -34,8 +34,8 @@
 
         <div id="listaItens"></div>
 
-        <label style="display:block; margin-top:15px; font-weight:bold;">Algum produto estragou ou venceu?</label>
-        <textarea id="obs" rows="2" placeholder="Descreva aqui o ocorrido..."></textarea>
+        <label style="display:block; margin-top:15px; font-weight:bold;">Observações (Avarias/Vencimento):</label>
+        <textarea id="obs" rows="2" placeholder="Descreva aqui..."></textarea>
 
         <div class="photo-area" onclick="document.getElementById('inputFoto').click()">
             <span id="txtFoto">📸 Foto da Ocorrência (Opcional)</span>
@@ -43,7 +43,7 @@
             <img id="preview">
         </div>
 
-        <button id="btnEnviar" class="btn" onclick="enviarSobra()">ENVIAR CONFERÊNCIA</button>
+        <button id="btnEnviar" class="btn" onclick="enviarSobra()">ENVIAR PARA PLANILHA</button>
     </div>
 
     <script>
@@ -78,7 +78,7 @@
 
         async function enviarSobra() {
             const nome = document.getElementById('nomeFunc').value;
-            if(!nome) return alert("Escreva o seu nome!");
+            if(!nome) return alert("Por favor, digite seu nome.");
             const btn = document.getElementById('btnEnviar');
             btn.innerText = "ENVIANDO..."; btn.disabled = true;
 
@@ -98,7 +98,7 @@
                         itens: itens
                     })
                 });
-                alert("Sucesso! Dados enviados.");
+                alert("Sucesso! Conferência registrada.");
                 location.reload();
             } catch (e) { alert("Erro de conexão."); btn.disabled = false; }
         }
