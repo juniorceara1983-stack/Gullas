@@ -3,6 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gullas Loja - Oficial</title>
+    <style>
+        :root { --primary: #f59e0b; --bg: #f8fafc; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; }
+        .container { max-width: 450px; margin: auto; background: white; border-radius: 24px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        .logo { width: 140px; margin-bottom: 10px; }
+        h2 { color: #1e293b; margin-bottom: 20px; font-weight: 800; font-size: 1.4rem; }
+        .item-card { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #fdfdfd; border: 1px solid #f1f5f9; border-radius: 12px; margin-bottom: 10px; transition: 0.2s; }
+        .item-name { font-weight: 600; color: #475569; }
+        .q-input { width: 70px; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; text-align: center; font-weight: bold; color: var(--primary); font-size: 1.1rem; }
+        .q-input:focus { border-color: var(--primary); outline: none; background: #fffbeb; }
+        input[type="text"], textarea { width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 12px; margin-bottom: 15px; box-sizing: border-box; font-size: 1rem; }
+        .btn { background: var(--primary); color: white; border: none; width: 100%; padding: 18px; border-radius: 14px; font-weight: bold; font-size: 1.1rem; cursor: pointer; box-shadow: 0 6px 12px rgba(245,158,11,0.3); transition: 0.3s; }
+        .btn:active { transform: translateY(2px); box-shadow: none; }
+    </style>
+</head>
+<body>
+    <div class="container" style="text-align:center;">
+        <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" class="logo">
+        <h2>Conferência de Sobras</h2>
+        
+        <input type="text" id="func" placeholder="Nome do Funcionário">
+        <div id="lista" style="text-align:left; margin-bottom:20px;"></div>
+        <textarea id="obs" placeholder="Observações ou danos..."></textarea>
+        
+        <button class="btn" id="btn" onclick="enviar()">FINALIZAR CONFERÊNCIA</button>
+    </div>
+
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwymkSXlXjQj27nWokMK9nNSystwUnDXCUqV_b2QcfDRCswl_DhTDJ06ozslFf_FA1h/exec";
+        const fixos = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
+
+        async function init() {
+            const res = await fetch(SCRIPT_URL);
+            const rows = await res.json();
+            const novos = rows.filter(r => r[1] === "ENVIO").map(r => r[2]);
+            const listaTotal = [...new Set([...fixos, ...novos])];
+            
+            const cont = document.getElementById('lista');
+            listaTotal.forEach(p => {
+                cont.innerHTML += `
+                    <div class="item-card">
+                        <span class="item-name">${p}</span>
+                        <input type="number" class="q" data-p="${p}" placeholder="0">
+                    </div>`;
+            });
+        }
+
+        async function enviar() {
+            const n = document.getElementById('func').value;
+            if(!n) return alert("Seu nome é obrigatório!");
+            const btn = document.getElementById('btn');
+            btn.innerText = "ENVIANDO AGUARDE..."; btn.disabled = true;
+
+            const itens = Array.from(document.querySelectorAll('.q'))
+                .filter(i => i.value !== "")
+                .map(i => ({ produto: i.dataset.p, qtd: i.value }));
+
+            await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "sobra", funcionario: n, itens: itens, observacao: document.getElementById('obs').value })});
+            alert("Conferência Enviada!"); location.reload();
+        }
+        init();
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gullas - Loja</title>
     <style>
         :root { --primary: #f59e0b; }
