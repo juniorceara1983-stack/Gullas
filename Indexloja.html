@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gullas - Conferência de Loja</title>
+    <title>Gullas - Conferência e Qualidade</title>
     <style>
         :root { --primary: #f59e0b; --secondary: #1e293b; --bg: #f1f5f9; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; }
@@ -13,34 +13,51 @@
         .item-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #e2e8f0; }
         .item-name { font-weight: 600; color: var(--secondary); }
         input[type="number"] { width: 70px; padding: 8px; border: 2px solid #cbd5e1; border-radius: 8px; text-align: center; font-weight: bold; }
-        input[type="text"], select { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 2px solid #cbd5e1; box-sizing: border-box; }
-        .btn { background: var(--primary); color: white; border: none; width: 100%; padding: 16px; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin-top: 20px; transition: 0.3s; }
-        .btn:active { transform: scale(0.98); }
+        input[type="text"], select, textarea { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 2px solid #cbd5e1; box-sizing: border-box; font-family: inherit; }
+        
+        /* Estilo para a área de foto */
+        .photo-area { background: #f8fafc; border: 2px dashed #cbd5e1; padding: 15px; text-align: center; border-radius: 12px; cursor: pointer; margin-bottom: 15px; }
+        #preview { width: 100%; max-height: 200px; object-fit: contain; display: none; margin-top: 10px; border-radius: 8px; }
+        
+        .btn { background: var(--primary); color: white; border: none; width: 100%; padding: 16px; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin-top: 10px; }
+        .btn:disabled { background: #cbd5e1; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://lh3.googleusercontent.com/d/1774954149094.png" alt="Gullas" class="logo-img">
-            <h2 style="color: var(--secondary); margin: 0;">CONFERÊNCIA DE SOBRAS</h2>
+            <h2 style="color: var(--secondary); margin: 0;">GULLAS - CONFERÊNCIA</h2>
+            <p style="font-size: 0.8rem; color: #64748b;">Registre as sobras e ocorrências</p>
         </div>
 
         <select id="turnoSelect">
-            <option value="Manhã">Turno: Manhã (Fechamento 14h)</option>
-            <option value="Tarde">Turno: Tarde (Fechamento Noite)</option>
+            <option value="Manhã">Turno: Manhã</option>
+            <option value="Tarde">Turno: Tarde</option>
         </select>
         
         <input type="text" id="nomeFunc" placeholder="Seu Nome">
-        
+
         <div id="listaItens"></div>
+
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+
+        <label style="font-weight: bold; color: var(--secondary); display: block; margin-bottom: 5px;">Houve alguma perda/avaria?</label>
+        <textarea id="obs" placeholder="Ex: 2 empadas quebradas no transporte / Bolo vencido." rows="3"></textarea>
+
+        <div class="photo-area" onclick="document.getElementById('inputFoto').click()">
+            <span id="txtFoto">📸 Foto da Ocorrência (Opcional)</span>
+            <input type="file" id="inputFoto" accept="image/jpeg, image/png" style="display:none" onchange="processarFoto(this)">
+            <img id="preview">
+        </div>
         
-        <button id="btnEnviar" class="btn" onclick="enviarSobra()">FINALIZAR CONFERÊNCIA</button>
+        <button id="btnEnviar" class="btn" onclick="enviarSobra()">FINALIZAR E ENVIAR</button>
     </div>
 
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzip6qASNtkcRNBWMINpQWVoxU71AL0Ajws_BmzobGdEBA23fa0-WvqX3GjIZf_me_1/exec";
         const itensAtivos = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
-        
+        let fotoBase64 = "";
+
         const container = document.getElementById('listaItens');
         itensAtivos.forEach(item => {
             container.innerHTML += `
@@ -50,31 +67,67 @@
                 </div>`;
         });
 
+        function processarFoto(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        // Comprimindo para não estourar o limite da planilha
+                        const MAX_WIDTH = 600;
+                        const scale = MAX_WIDTH / img.width;
+                        canvas.width = MAX_WIDTH;
+                        canvas.height = img.height * scale;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        
+                        fotoBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                        document.getElementById('preview').src = fotoBase64;
+                        document.getElementById('preview').style.display = 'block';
+                        document.getElementById('txtFoto').innerText = "Foto Selecionada ✅";
+                    }
+                    img.src = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
         async function enviarSobra() {
             const nome = document.getElementById('nomeFunc').value;
             const turno = document.getElementById('turnoSelect').value;
+            const observacao = document.getElementById('obs').value;
             const btn = document.getElementById('btnEnviar');
 
-            if(!nome) return alert("Digite seu nome!");
+            if(!nome) return alert("Por favor, digite seu nome.");
 
-            btn.innerText = "ENVIANDO..."; btn.disabled = true;
+            btn.innerText = "ENVIANDO DADOS..."; btn.disabled = true;
 
             const inputs = document.querySelectorAll('.sobra-input');
             const itens = Array.from(inputs)
                 .filter(i => i.value !== "")
                 .map(i => ({ produto: i.dataset.prod, qtd: parseInt(i.value) }));
 
+            const dadosParaEnviar = {
+                action: "sobra",
+                funcionario: nome,
+                turno: turno,
+                itens: itens,
+                observacao: observacao,
+                foto: fotoBase64
+            };
+
             try {
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors',
-                    body: JSON.stringify({ action: "sobra", funcionario: nome, turno: turno, itens: itens })
+                    body: JSON.stringify(dadosParaEnviar)
                 });
-                alert("Sucesso! Sobras registradas.");
+                alert("Conferência e ocorrências enviadas com sucesso!");
                 location.reload();
             } catch (e) {
-                alert("Erro ao enviar. Verifique a internet.");
-                btn.disabled = false; btn.innerText = "FINALIZAR CONFERÊNCIA";
+                alert("Erro ao enviar. Verifique sua conexão.");
+                btn.disabled = false; btn.innerText = "FINALIZAR E ENVIAR";
             }
         }
     </script>
