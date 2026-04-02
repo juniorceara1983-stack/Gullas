@@ -5,85 +5,82 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gullas - Loja</title>
     <style>
-        :root { --primary: #f59e0b; --bg: #ffffff; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f8fafc; margin: 0; padding: 15px; }
+        :root { --primary: #f59e0b; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f8fafc; margin: 0; padding: 15px; text-align: center; }
         .container { max-width: 400px; margin: auto; background: white; border-radius: 20px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-top: 8px solid var(--primary); }
-        .header { text-align: center; margin-bottom: 20px; }
-        .logo-img { width: 120px; height: auto; margin-bottom: 10px; }
-        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
-        input, select, textarea { width: 100%; padding: 12px; margin-top: 5px; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box; }
+        .logo-img { width: 140px; margin-bottom: 10px; }
+        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
+        input, select, textarea { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box; }
         .sobra-input { width: 80px; text-align: center; font-weight: bold; }
-        .photo-area { background: #f1f5f9; border: 2px dashed #cbd5e1; padding: 15px; text-align: center; border-radius: 12px; cursor: pointer; margin: 15px 0; }
-        #preview { width: 100%; max-height: 150px; object-fit: contain; display: none; margin-top: 10px; border-radius: 8px; }
-        .btn { background: var(--primary); color: white; border: none; width: 100%; padding: 16px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .btn { background: var(--primary); color: white; border: none; width: 100%; padding: 16px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 15px; font-size: 1rem; }
+        #loading { color: #64748b; font-style: italic; margin: 20px 0; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <img src="1774954149094.png" alt="Gullas Logo" class="logo-img">
-            <h2 style="margin:0; color:var(--primary);">CONFERÊNCIA</h2>
+        <img src="https://github.com/joscelis/gullas/blob/main/1774954149094.png?raw=true" class="logo-img">
+        <h2 style="color:var(--primary); margin:0;">CONFERÊNCIA</h2>
+        
+        <div id="loading">Carregando produtos...</div>
+
+        <div id="formContent" style="display:none;">
+            <select id="turnoSelect"><option value="Manhã">Turno: Manhã</option><option value="Tarde">Turno: Tarde</option></select>
+            <input type="text" id="nomeFunc" placeholder="Nome do Funcionário">
+            
+            <div id="listaItens" style="margin-top:15px;"></div>
+            
+            <textarea id="obs" placeholder="Alguma avaria ou observação? (Opcional)"></textarea>
+            
+            <button id="btnEnviar" class="btn" onclick="enviarSobra()">FINALIZAR CONFERÊNCIA</button>
         </div>
-        <select id="turnoSelect"><option value="Manhã">Manhã</option><option value="Tarde">Tarde</option></select>
-        <input type="text" id="nomeFunc" placeholder="Nome do Funcionário">
-        <div id="listaItens"></div>
-        <textarea id="obs" rows="2" placeholder="Observações/Avarias (Opcional)"></textarea>
-        <div class="photo-area" onclick="document.getElementById('inputFoto').click()">
-            <span id="txtFoto">📸 Tirar Foto</span>
-            <input type="file" id="inputFoto" accept="image/*" style="display:none" onchange="processarFoto(this)">
-            <img id="preview">
-        </div>
-        <button id="btnEnviar" class="btn" onclick="enviarSobra()">ENVIAR DADOS</button>
     </div>
 
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwymkSXlXjQj27nWokMK9nNSystwUnDXCUqV_b2QcfDRCswl_DhTDJ06ozslFf_FA1h/exec";
-        const itens = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
-        let fotoBase64 = "";
-
-        const container = document.getElementById('listaItens');
-        itens.forEach(item => {
-            container.innerHTML += `<div class="item-row"><span>${item}</span><input type="number" class="sobra-input" data-prod="${item}" placeholder="0"></div>`;
-        });
-
-        function processarFoto(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = new Image();
-                    img.onload = function() {
-                        const canvas = document.createElement('canvas');
-                        const scale = 400 / img.width;
-                        canvas.width = 400; canvas.height = img.height * scale;
-                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                        fotoBase64 = canvas.toDataURL('image/jpeg', 0.6);
-                        document.getElementById('preview').src = fotoBase64;
-                        document.getElementById('preview').style.display = 'block';
-                    }
-                    img.src = e.target.result;
+        
+        async function init() {
+            try {
+                const res = await fetch(SCRIPT_URL + "?action=getProdutos");
+                const produtos = await res.json();
+                const container = document.getElementById('listaItens');
+                
+                if(produtos.length === 0) {
+                    container.innerHTML = "<p>Nenhum produto cadastrado no ADM.</p>";
+                } else {
+                    produtos.forEach(item => {
+                        container.innerHTML += `<div class="item-row"><span>${item}</span><input type="number" class="sobra-input" data-prod="${item}" placeholder="0"></div>`;
+                    });
                 }
-                reader.readAsDataURL(input.files[0]);
-            }
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('formContent').style.display = 'block';
+            } catch(e) { document.getElementById('loading').innerText = "Erro de conexão."; }
         }
 
         async function enviarSobra() {
             const nome = document.getElementById('nomeFunc').value;
-            if(!nome) return alert("Por favor, escreva o seu nome.");
-            document.getElementById('btnEnviar').innerText = "A ENVIAR...";
-            const dados = {
-                action: "sobra",
-                funcionario: nome,
-                turno: document.getElementById('turnoSelect').value,
-                observacao: document.getElementById('obs').value,
-                foto: fotoBase64,
-                itens: Array.from(document.querySelectorAll('.sobra-input')).filter(i => i.value !== "").map(i => ({ produto: i.dataset.prod, qtd: parseInt(i.value) }))
-            };
-            try {
-                await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(dados) });
-                alert("Conferência enviada com sucesso!");
-                location.reload();
-            } catch (e) { alert("Erro ao enviar."); document.getElementById('btnEnviar').innerText = "ENVIAR DADOS"; }
+            if(!nome) return alert("Por favor, digite seu nome.");
+            
+            const btn = document.getElementById('btnEnviar');
+            btn.innerText = "ENVIANDO..."; btn.disabled = true;
+
+            const itens = Array.from(document.querySelectorAll('.sobra-input'))
+                .filter(i => i.value !== "").map(i => ({ produto: i.dataset.prod, qtd: parseInt(i.value) }));
+
+            await fetch(SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify({
+                    action: "sobra",
+                    funcionario: nome,
+                    turno: document.getElementById('turnoSelect').value,
+                    observacao: document.getElementById('obs').value,
+                    itens: itens
+                })
+            });
+            alert("Dados enviados com sucesso!");
+            location.reload();
         }
+        init();
     </script>
 </body>
 </html>
