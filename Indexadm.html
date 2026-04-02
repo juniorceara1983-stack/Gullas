@@ -7,35 +7,33 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <style>
-        :root { --primary: #f59e0b; --bg: #f1f5f9; }
+        :root { --primary: #f59e0b; --bg: #f1f5f9; --danger: #ef4444; }
         body { font-family: sans-serif; background: var(--bg); text-align: center; padding: 15px; margin: 0; color: #334155; }
         .logo { width: 100px; margin-bottom: 10px; }
         .card { background: white; border-radius: 16px; padding: 18px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         h3 { margin: 0 0 15px 0; font-size: 1rem; text-transform: uppercase; color: #1e293b; }
         
-        .prod-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+        /* Acordeão de Itens */
+        .btn-lista-toggle { background: white; color: var(--primary); border: 2px solid var(--primary); padding: 15px; border-radius: 12px; width: 100%; font-weight: bold; font-size: 1rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; }
+        #listaProducao { display: none; padding: 10px; background: #fffcf5; border-radius: 0 0 12px 12px; border: 1px solid #ffeeba; border-top: none; margin-bottom: 15px; }
+        
+        .prod-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
         .prod-name { font-weight: 500; font-size: 0.9rem; text-align: left; flex: 1; }
-        .q-input { width: 60px; padding: 8px; border: 2px solid #e2e8f0; border-radius: 8px; text-align: center; font-weight: bold; }
+        .q-massa { width: 65px; padding: 8px; border: 2px solid #ddd; border-radius: 8px; text-align: center; font-weight: bold; }
         
-        .btn-novo-item { background: #e2e8f0; color: #475569; border: none; padding: 8px 15px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
-        
-        .item-novo-container { display: none; background: #fffbeb; padding: 12px; border-radius: 12px; margin-bottom: 15px; }
+        .btn-novo-item { background: #e2e8f0; color: #475569; border: none; padding: 8px 15px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .item-novo-container { display: none; background: #fffbeb; padding: 12px; border-radius: 12px; margin-top: 10px; }
         .input-text { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; margin-bottom: 10px; box-sizing: border-box; }
 
-        .btn-main { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; width: 100%; cursor: pointer; font-size: 1rem; margin-top: 10px; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.85rem; }
-        th, td { padding: 12px 8px; border-bottom: 1px solid #f1f5f9; text-align: center; }
-        th { color: #64748b; font-weight: 600; }
-        .text-left { text-align: left; }
+        .btn-main { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; width: 100%; cursor: pointer; font-size: 1rem; margin-top: 10px; transition: 0.2s; }
+        .btn-main:active { transform: scale(0.98); }
 
-        /* Estilo do Modal Bíblico */
-        #modalBiblico { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
+        /* Modais */
+        .modal-overlay { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; backdrop-filter: blur(3px); }
         .modal-content { background: white; width: 85%; max-width: 350px; padding: 30px; border-radius: 25px; text-align: center; animation: pop 0.3s ease; }
         @keyframes pop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .modal-logo { width: 80px; margin-bottom: 15px; }
-        .modal-text { font-style: italic; color: #444; line-height: 1.5; font-size: 1.1rem; margin-bottom: 20px; }
-        .btn-modal { background: #333; color: white; border: none; padding: 12px 25px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .modal-text { color: #444; font-size: 1.1rem; margin-bottom: 20px; line-height: 1.4; }
     </style>
 </head>
 <body>
@@ -43,6 +41,14 @@
     
     <div class="card">
         <h3>Controle de Produção</h3>
+        <button class="btn-lista-toggle" id="btnToggleLista" onclick="toggleLista()">
+            ITENS PRÉ-DEFINIDOS <span>▼</span>
+        </button>
+
+        <div id="listaProducao">
+            <button class="btn-main" id="btnMassa" onclick="enviarMassa()">REGISTRAR SELECIONADOS</button>
+        </div>
+
         <button class="btn-novo-item" onclick="toggleNovoItem()">+ NOVO ITEM</button>
 
         <div id="containerNovo" class="item-novo-container">
@@ -50,93 +56,98 @@
             <input type="number" id="q_novo" class="input-text" placeholder="Quantidade">
             <button class="btn-main" style="background:#475569; padding: 10px;" onclick="enviarNovo()">REGISTRAR EXTRA</button>
         </div>
-
-        <div id="listaProducao"></div>
-        <button class="btn-main" id="btnMassa" onclick="enviarMassa()">REGISTRAR PRODUÇÃO</button>
     </div>
 
     <div class="card">
         <h3>Balanço Geral</h3>
-        <table id="tabelaVendas">
+        <table style="width:100%; border-collapse: collapse; font-size: 0.85rem;" id="tabelaVendas">
             <thead>
-                <tr><th class="text-left">Item</th><th>Env</th><th>Sob</th><th>Ven</th></tr>
+                <tr style="border-bottom: 2px solid #eee;">
+                    <th style="text-align:left; padding:10px;">Item</th>
+                    <th>Env</th><th>Sob</th><th>Ven</th>
+                </tr>
             </thead>
             <tbody id="corpoBalanço"></tbody>
         </table>
         
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:20px;">
             <button class="btn-main" style="background:#10b981; font-size: 0.8rem;" onclick="gerarPDF()">📄 PDF</button>
-            <button class="btn-main" style="background:#ef4444; font-size: 0.8rem;" onclick="fecharCaixa()">🔒 FECHAR CX</button>
+            <button class="btn-main" style="background:var(--danger); font-size: 0.8rem;" onclick="abrirConfirmacao()">🔒 FECHAR CX</button>
         </div>
         <button class="btn-main" style="background:#64748b; margin-top:10px;" onclick="carregar()">🔄 ATUALIZAR</button>
     </div>
 
-    <div id="modalBiblico">
+    <div id="modalConfirmar" class="modal-overlay">
         <div class="modal-content">
             <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" class="modal-logo">
-            <div id="textoBiblico" class="modal-text"></div>
-            <button class="btn-modal" onclick="confirmarFechamento()">AMÉM</button>
+            <div class="modal-text"><b>Deseja realmente encerrar o caixa agora?</b><br><small>Esta ação zerará o balanço atual.</small></div>
+            <button class="btn-main" style="background:var(--danger)" onclick="executarFechamento()">SIM, CONFIRMAR FECHAMENTO</button>
+            <button class="btn-novo-item" style="width:100%; padding:12px; margin-top:10px;" onclick="fecharModais()">CANCELAR</button>
+        </div>
+    </div>
+
+    <div id="modalBiblico" class="modal-overlay">
+        <div class="modal-content">
+            <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" class="modal-logo">
+            <div id="textoBiblico" class="modal-text" style="font-style: italic;"></div>
+            <button class="btn-main" style="background:#333" onclick="location.reload()">AMÉM</button>
         </div>
     </div>
 
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwymkSXlXjQj27nWokMK9nNSystwUnDXCUqV_b2QcfDRCswl_DhTDJ06ozslFf_FA1h/exec";
         const itensFixos = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
-        
-        const mensagens = [
-            "O Senhor é o meu pastor, nada me faltará. (Salmo 23:1)",
-            "Tudo posso naquele que me fortalece. (Filipenses 4:13)",
-            "Deem graças ao Senhor, porque ele é bom. (Salmo 136:1)",
-            "Seja forte e corajoso! (Josué 1:9)",
-            "Consagre ao Senhor tudo o que você faz. (Provérbios 16:3)",
-            "A alegria do Senhor é a vossa força. (Neemias 8:10)",
-            "O Senhor te abençoe e te guarde. (Números 6:24)",
-            "Não temas, porque eu sou contigo. (Isaías 41:10)",
-            "Em tudo dai graças. (1 Tessalonicenses 5:18)",
-            "A fé é a certeza daquilo que esperamos. (Hebreus 11:1)"
-        ];
+        const mensagens = ["Tudo posso naquele que me fortalece. (Filipenses 4:13)", "O Senhor é o meu pastor, nada me faltará. (Salmo 23:1)", "A alegria do Senhor é a vossa força. (Neemias 8:10)", "Em tudo dai graças. (1 Tessalonicenses 5:18)", "Seja forte e corajoso! (Josué 1:9)"];
+
+        function toggleLista() {
+            const lista = document.getElementById('listaProducao');
+            const btn = document.getElementById('btnToggleLista');
+            const isAberto = lista.style.display === 'block';
+            lista.style.display = isAberto ? 'none' : 'block';
+            btn.querySelector('span').innerText = isAberto ? '▼' : '▲';
+        }
 
         function toggleNovoItem() {
             const c = document.getElementById('containerNovo');
             c.style.display = (c.style.display === 'block') ? 'none' : 'block';
         }
 
-        function renderizarListaProducao() {
+        function renderizarLista() {
             const cont = document.getElementById('listaProducao');
-            cont.innerHTML = "";
+            const btnAcao = document.getElementById('btnMassa');
             itensFixos.forEach(item => {
-                cont.innerHTML += `<div class="prod-row"><span class="prod-name">${item}</span><input type="number" class="q-massa" data-p="${item}" placeholder="0"></div>`;
+                const div = document.createElement('div');
+                div.className = 'prod-row';
+                div.innerHTML = `<span class="prod-name">${item}</span><input type="number" class="q-massa" data-p="${item}" placeholder="0">`;
+                cont.insertBefore(div, btnAcao);
             });
         }
 
         async function enviarMassa() {
             const inputs = Array.from(document.querySelectorAll('.q-massa')).filter(i => i.value !== "" && i.value > 0);
-            if(inputs.length === 0) return alert("Preencha ao menos uma quantidade.");
+            if(inputs.length === 0) return alert("Preencha as quantidades!");
             const btn = document.getElementById('btnMassa');
             btn.innerText = "ENVIANDO..."; btn.disabled = true;
             for(const input of inputs) {
                 await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "envio", produto: input.dataset.p, qtd: parseInt(input.value) })});
             }
-            alert("Produção registrada!");
-            inputs.forEach(i => i.value = ""); 
-            btn.innerText = "REGISTRAR PRODUÇÃO"; btn.disabled = false;
+            alert("Sucesso!"); toggleLista();
+            inputs.forEach(i => i.value = ""); btn.innerText = "REGISTRAR SELECIONADOS"; btn.disabled = false;
             carregar();
         }
 
         async function enviarNovo() {
-            const p = document.getElementById('nome_novo').value;
-            const q = document.getElementById('q_novo').value;
+            const p = document.getElementById('nome_novo').value, q = document.getElementById('q_novo').value;
             if(!p || !q) return alert("Preencha tudo!");
             await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "envio", produto: p, qtd: parseInt(q) })});
             alert("Item extra registrado!");
             document.getElementById('nome_novo').value = ""; document.getElementById('q_novo').value = "";
-            toggleNovoItem();
-            carregar();
+            toggleNovoItem(); carregar();
         }
 
         async function carregar() {
             const corpo = document.getElementById('corpoBalanço');
-            corpo.innerHTML = "<tr><td colspan='4'>Atualizando...</td></tr>";
+            corpo.innerHTML = "<tr><td colspan='4'>Carregando...</td></tr>";
             try {
                 const res = await fetch(SCRIPT_URL);
                 const rows = await res.json();
@@ -152,37 +163,41 @@
                 for(let p in resumo) {
                     const v = resumo[p].e - resumo[p].s;
                     if(itensFixos.includes(p) || resumo[p].e > 0 || resumo[p].s > 0) {
-                        corpo.innerHTML += `<tr><td class="text-left">${p}</td><td>${resumo[p].e}</td><td>${resumo[p].s}</td><td style="font-weight:bold;color:${v>0?'green':'black'}">${v>0?v:0}</td></tr>`;
+                        corpo.innerHTML += `<tr style="border-bottom:1px solid #eee;"><td style="text-align:left; padding:10px;">${p}</td><td>${resumo[p].e}</td><td>${resumo[p].s}</td><td style="font-weight:bold;color:${v>0?'green':'black'}">${v>0?v:0}</td></tr>`;
                     }
                 }
             } catch(e) { console.error(e); }
         }
 
-        async function fecharCaixa() {
-            if(!confirm("Deseja encerrar o turno e zerar o balanço?")) return;
-            
-            // Chama o script para fechar
-            await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "fechar" })});
-            
-            // Escolhe mensagem aleatória e mostra o modal
-            const msgAleatoria = mensagens[Math.floor(Math.random() * mensagens.length)];
-            document.getElementById('textoBiblico').innerText = msgAleatoria;
-            document.getElementById('modalBiblico').style.display = 'flex';
+        // NOVO FLUXO DE FECHAMENTO
+        function abrirConfirmacao() {
+            document.getElementById('modalConfirmar').style.display = 'flex';
         }
 
-        function confirmarFechamento() {
-            location.reload();
+        function fecharModais() {
+            document.getElementById('modalConfirmar').style.display = 'none';
+        }
+
+        async function executarFechamento() {
+            fecharModais();
+            // Inicia o processo no servidor
+            await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "fechar" })});
+            
+            // Escolhe mensagem bíblica
+            const msg = mensagens[Math.floor(Math.random() * mensagens.length)];
+            document.getElementById('textoBiblico').innerText = msg;
+            document.getElementById('modalBiblico').style.display = 'flex';
         }
 
         function gerarPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            doc.text("Gullas - Balanço do Dia - " + new Date().toLocaleDateString(), 14, 15);
-            doc.autoTable({ html: '#tabelaVendas', startY: 25, theme: 'grid', headStyles: {fillColor: [245, 158, 11]} });
-            doc.save("Gullas_Balanco.pdf");
+            doc.text("Gullas - Balanço", 14, 15);
+            doc.autoTable({ html: '#tabelaVendas', startY: 25, theme: 'grid' });
+            doc.save("Gullas_Relatorio.pdf");
         }
 
-        renderizarListaProducao();
+        renderizarLista();
         carregar();
     </script>
 </body>
