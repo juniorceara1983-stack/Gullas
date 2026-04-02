@@ -8,6 +8,8 @@
         :root { --primary: #f59e0b; --bg: #ffffff; }
         body { font-family: 'Segoe UI', sans-serif; background: #f8fafc; margin: 0; padding: 15px; }
         .container { max-width: 400px; margin: auto; background: white; border-radius: 20px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-top: 8px solid var(--primary); }
+        .header { text-align: center; margin-bottom: 20px; }
+        .logo-img { width: 120px; height: auto; margin-bottom: 10px; }
         .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
         input, select, textarea { width: 100%; padding: 12px; margin-top: 5px; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box; }
         .sobra-input { width: 80px; text-align: center; font-weight: bold; }
@@ -18,17 +20,20 @@
 </head>
 <body>
     <div class="container">
-        <h2 style="text-align:center; color:var(--primary);">CONFERÊNCIA GULLAS</h2>
+        <div class="header">
+            <img src="1774954149094.png" alt="Gullas Logo" class="logo-img">
+            <h2 style="margin:0; color:var(--primary);">CONFERÊNCIA</h2>
+        </div>
         <select id="turnoSelect"><option value="Manhã">Manhã</option><option value="Tarde">Tarde</option></select>
-        <input type="text" id="nomeFunc" placeholder="Seu Nome">
+        <input type="text" id="nomeFunc" placeholder="Nome do Funcionário">
         <div id="listaItens"></div>
-        <textarea id="obs" rows="2" placeholder="Observações (Opcional)"></textarea>
+        <textarea id="obs" rows="2" placeholder="Observações/Avarias (Opcional)"></textarea>
         <div class="photo-area" onclick="document.getElementById('inputFoto').click()">
             <span id="txtFoto">📸 Tirar Foto</span>
             <input type="file" id="inputFoto" accept="image/*" style="display:none" onchange="processarFoto(this)">
             <img id="preview">
         </div>
-        <button id="btnEnviar" class="btn" onclick="enviarSobra()">FINALIZAR</button>
+        <button id="btnEnviar" class="btn" onclick="enviarSobra()">ENVIAR DADOS</button>
     </div>
 
     <script>
@@ -63,8 +68,8 @@
 
         async function enviarSobra() {
             const nome = document.getElementById('nomeFunc').value;
-            if(!nome) return alert("Digite seu nome!");
-            document.getElementById('btnEnviar').innerText = "ENVIANDO...";
+            if(!nome) return alert("Por favor, escreva o seu nome.");
+            document.getElementById('btnEnviar').innerText = "A ENVIAR...";
             const dados = {
                 action: "sobra",
                 funcionario: nome,
@@ -73,8 +78,11 @@
                 foto: fotoBase64,
                 itens: Array.from(document.querySelectorAll('.sobra-input')).filter(i => i.value !== "").map(i => ({ produto: i.dataset.prod, qtd: parseInt(i.value) }))
             };
-            await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(dados) });
-            alert("Enviado!"); location.reload();
+            try {
+                await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(dados) });
+                alert("Conferência enviada com sucesso!");
+                location.reload();
+            } catch (e) { alert("Erro ao enviar."); document.getElementById('btnEnviar').innerText = "ENVIAR DADOS"; }
         }
     </script>
 </body>
