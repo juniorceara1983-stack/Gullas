@@ -5,91 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gullas Loja - Oficial</title>
     <style>
-        :root { --primary: #f59e0b; --bg: #f8fafc; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; }
-        .container { max-width: 450px; margin: auto; background: white; border-radius: 24px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-        .logo { width: 140px; margin-bottom: 10px; }
-        h2 { color: #1e293b; margin-bottom: 20px; font-weight: 800; font-size: 1.4rem; }
-        .item-card { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #fdfdfd; border: 1px solid #f1f5f9; border-radius: 12px; margin-bottom: 10px; transition: 0.2s; }
-        .item-name { font-weight: 600; color: #475569; }
-        .q-input { width: 70px; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; text-align: center; font-weight: bold; color: var(--primary); font-size: 1.1rem; }
-        .q-input:focus { border-color: var(--primary); outline: none; background: #fffbeb; }
-        input[type="text"], textarea { width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 12px; margin-bottom: 15px; box-sizing: border-box; font-size: 1rem; }
-        .btn { background: var(--primary); color: white; border: none; width: 100%; padding: 18px; border-radius: 14px; font-weight: bold; font-size: 1.1rem; cursor: pointer; box-shadow: 0 6px 12px rgba(245,158,11,0.3); transition: 0.3s; }
-        .btn:active { transform: translateY(2px); box-shadow: none; }
-    </style>
-</head>
-<body>
-    <div class="container" style="text-align:center;">
-        <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" class="logo">
-        <h2>Conferência de Sobras</h2>
-        
-        <input type="text" id="func" placeholder="Nome do Funcionário">
-        <div id="lista" style="text-align:left; margin-bottom:20px;"></div>
-        <textarea id="obs" placeholder="Observações ou danos..."></textarea>
-        
-        <button class="btn" id="btn" onclick="enviar()">FINALIZAR CONFERÊNCIA</button>
-    </div>
-
-    <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwymkSXlXjQj27nWokMK9nNSystwUnDXCUqV_b2QcfDRCswl_DhTDJ06ozslFf_FA1h/exec";
-        const fixos = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
-
-        async function init() {
-            const res = await fetch(SCRIPT_URL);
-            const rows = await res.json();
-            const novos = rows.filter(r => r[1] === "ENVIO").map(r => r[2]);
-            const listaTotal = [...new Set([...fixos, ...novos])];
-            
-            const cont = document.getElementById('lista');
-            listaTotal.forEach(p => {
-                cont.innerHTML += `
-                    <div class="item-card">
-                        <span class="item-name">${p}</span>
-                        <input type="number" class="q" data-p="${p}" placeholder="0">
-                    </div>`;
-            });
-        }
-
-        async function enviar() {
-            const n = document.getElementById('func').value;
-            if(!n) return alert("Seu nome é obrigatório!");
-            const btn = document.getElementById('btn');
-            btn.innerText = "ENVIANDO AGUARDE..."; btn.disabled = true;
-
-            const itens = Array.from(document.querySelectorAll('.q'))
-                .filter(i => i.value !== "")
-                .map(i => ({ produto: i.dataset.p, qtd: i.value }));
-
-            await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "sobra", funcionario: n, itens: itens, observacao: document.getElementById('obs').value })});
-            alert("Conferência Enviada!"); location.reload();
-        }
-        init();
-    </script>
-</body>
-</html><!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gullas - Loja</title>
-    <style>
         :root { --primary: #f59e0b; }
         body { font-family: sans-serif; background: #f8fafc; text-align: center; padding: 15px; margin: 0; }
-        .container { max-width: 400px; margin: auto; background: white; border-radius: 20px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-top: 8px solid var(--primary); }
-        .logo { width: 150px; margin-bottom: 15px; }
+        .container { max-width: 400px; margin: auto; background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-top: 6px solid var(--primary); }
+        .logo { width: 120px; margin-bottom: 15px; }
+        h3 { margin-top: 0; color: #333; }
+        input[type="text"], textarea { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
         .item-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
-        input, textarea { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
-        .q-input { width: 70px; text-align: center; font-weight: bold; }
-        .btn { background: var(--primary); color: white; border: none; width: 100%; padding: 16px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        .item-name { font-weight: 500; color: #333; text-align: left; flex: 1; }
+        .q-sobra { width: 60px; text-align: center; border: 1px solid #ddd; border-radius: 6px; padding: 8px; }
+        .btn { background: var(--primary); color: white; border: none; width: 100%; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 20px; font-size: 1rem; }
+        .btn:active { opacity: 0.8; }
     </style>
 </head>
 <body>
     <div class="container">
         <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" class="logo">
-        <input type="text" id="func" placeholder="Nome do Funcionário">
-        <div id="lista"></div>
-        <textarea id="obs" placeholder="Alguma observação?"></textarea>
+        <h3>CONFERÊNCIA DE SOBRAS</h3>
+        
+        <input type="text" id="func" placeholder="Seu Nome">
+        
+        <div id="listaItens" style="margin-top: 15px;"></div>
+        
+        <textarea id="obs" placeholder="Observações (Opcional)"></textarea>
+        
         <button class="btn" id="btn" onclick="enviar()">ENVIAR CONFERÊNCIA</button>
     </div>
 
@@ -97,25 +36,69 @@
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwymkSXlXjQj27nWokMK9nNSystwUnDXCUqV_b2QcfDRCswl_DhTDJ06ozslFf_FA1h/exec";
         const fixos = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
 
+        const mensagens = [
+            "O Senhor é o meu pastor, nada me faltará. (Salmo 23:1)",
+            "Tudo posso naquele que me fortalece. (Filipenses 4:13)",
+            "O que é impossível para os homens é possível para Deus. (Lucas 18:27)",
+            "Deem graças ao Senhor, porque ele é bom; o seu amor dura para sempre. (Salmo 136:1)",
+            "Seja forte e corajoso! Não se apavore nem desanime. (Josué 1:9)",
+            "O Senhor te abençoe e te guarde. (Números 6:24)",
+            "A alegria do Senhor é a vossa força. (Neemias 8:10)",
+            "Consagre ao Senhor tudo o que você faz, e os seus planos serão bem-sucedidos. (Provérbios 16:3)",
+            "O amor nunca falha. (1 Coríntios 13:8)",
+            "Mil cairão ao teu lado, dez mil à tua direita, mas tu não serás atingido. (Salmo 91:7)",
+            "O Senhor é bom, um refúgio em tempos de angústia. (Naum 1:7)",
+            "Confie no Senhor de todo o seu coração. (Provérbios 3:5)",
+            "Apascenta as minhas ovelhas. (João 21:17)",
+            "Pedis e recebereis, para que a vossa alegria seja completa. (João 16:24)",
+            "O choro pode durar uma noite, mas a alegria vem pela manhã. (Salmo 30:5)",
+            "Não temas, porque eu sou contigo; não te assombres, porque eu sou o teu Deus. (Isaías 41:10)",
+            "Guardai-vos de toda a ganância. (Lucas 12:15)",
+            "Eis que estou convosco todos os dias. (Mateus 28:20)",
+            "A fé é a certeza daquilo que esperamos. (Hebreus 11:1)",
+            "Em tudo dai graças, porque esta é a vontade de Deus. (1 Tessalonicenses 5:18)"
+        ];
+
         async function init() {
-            const res = await fetch(SCRIPT_URL);
-            const rows = await res.json();
-            const novos = rows.filter(r => r[1] === "ENVIO").map(r => r[2]);
-            const listaTotal = [...new Set([...fixos, ...novos])];
-            
-            const cont = document.getElementById('lista');
-            listaTotal.forEach(p => {
-                cont.innerHTML += `<div class="item-row"><span>${p}</span><input type="number" class="q" data-p="${p}" placeholder="0"></div>`;
-            });
+            const cont = document.getElementById('listaItens');
+            try {
+                const res = await fetch(SCRIPT_URL);
+                const rows = await res.json();
+                const novos = rows.filter(r => r[1] === "ENVIO").map(r => r[2]);
+                const listaTotal = [...new Set([...fixos, ...novos])];
+                cont.innerHTML = "";
+                listaTotal.forEach(item => {
+                    cont.innerHTML += `
+                        <div class="item-row">
+                            <span class="item-name">${item}</span>
+                            <input type="number" class="q-sobra" data-p="${item}" placeholder="0">
+                        </div>`;
+                });
+            } catch(e) { console.log("Erro ao carregar."); }
         }
 
         async function enviar() {
             const n = document.getElementById('func').value;
-            if(!n) return alert("Seu nome!");
-            document.getElementById('btn').innerText = "Enviando...";
-            const itens = Array.from(document.querySelectorAll('.q')).filter(i => i.value !== "").map(i => ({ produto: i.dataset.p, qtd: i.value }));
-            await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "sobra", funcionario: n, itens: itens, observacao: document.getElementById('obs').value })});
-            alert("Sucesso!"); location.reload();
+            if(!n) return alert("Por favor, digite seu nome!");
+            const btn = document.getElementById('btn');
+            btn.innerText = "Enviando...";
+            btn.disabled = true;
+            const itens = Array.from(document.querySelectorAll('.q-sobra')).filter(i => i.value !== "").map(i => ({ produto: i.dataset.p, qtd: i.value }));
+
+            try {
+                await fetch(SCRIPT_URL, { 
+                    method: 'POST', 
+                    mode: 'no-cors', 
+                    body: JSON.stringify({ action: "sobra", funcionario: n, itens: itens, observacao: document.getElementById('obs').value })
+                });
+                const msgAleatoria = mensagens[Math.floor(Math.random() * mensagens.length)];
+                alert("Sucesso! Conferência Enviada.\n\nPalavra do dia:\n" + msgAleatoria);
+                location.reload();
+            } catch(e) {
+                alert("Erro ao enviar.");
+                btn.innerText = "ENVIAR CONFERÊNCIA";
+                btn.disabled = false;
+            }
         }
         init();
     </script>
