@@ -3,57 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gullas - Loja</title>
+    <title>Gullas - Conferência Loja</title>
     <style>
-        :root { --primary: #f59e0b; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f8fafc; margin: 0; padding: 15px; text-align: center; }
-        .container { max-width: 400px; margin: auto; background: white; border-radius: 20px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-top: 8px solid var(--primary); }
-        .logo-img { width: 140px; margin-bottom: 10px; }
+        :root { --primary: #f59e0b; --bg: #f8fafc; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; text-align: center; }
+        .container { max-width: 400px; margin: auto; background: white; border-radius: 20px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-top: 8px solid var(--primary); }
+        .logo-img { width: 130px; margin-bottom: 10px; }
         .item-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
-        input, select, textarea { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box; }
-        .sobra-input { width: 80px; text-align: center; font-weight: bold; }
-        .btn { background: var(--primary); color: white; border: none; width: 100%; padding: 16px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 15px; font-size: 1rem; }
-        #loading { color: #64748b; font-style: italic; margin: 20px 0; }
+        .item-name { font-weight: 500; color: #334155; text-align: left; flex: 1; }
+        input, select, textarea { width: 100%; padding: 12px; margin-top: 8px; border-radius: 10px; border: 1px solid #cbd5e1; box-sizing: border-box; font-size: 16px; }
+        .sobra-input { width: 70px; text-align: center; font-weight: bold; border: 2px solid #e2e8f0; }
+        .btn { background: var(--primary); color: white; border: none; width: 100%; padding: 16px; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 20px; font-size: 1rem; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2); }
+        .btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+        #loading { color: #64748b; font-style: italic; margin: 30px 0; }
+        .status-badge { background: #fee2e2; color: #dc2626; padding: 10px; border-radius: 8px; font-size: 0.9rem; margin: 10px 0; display: none; }
     </style>
 </head>
 <body>
+
     <div class="container">
-        <img src="https://github.com/joscelis/gullas/blob/main/1774954149094.png?raw=true" class="logo-img">
-        <h2 style="color:var(--primary); margin:0;">CONFERÊNCIA</h2>
+        <img src="https://raw.githubusercontent.com/joscelis/gullas/main/1774954149094.png" class="logo-img" alt="Gullas Logo">
         
-        <div id="loading">Carregando produtos...</div>
+        <h2 style="color:var(--primary); margin:0 0 15px 0;">CONFERÊNCIA DE SOBRAS</h2>
+        
+        <div id="loading">Consultando produção de hoje...</div>
+        <div id="erroStatus" class="status-badge">Nenhum produto enviado hoje pela produção.</div>
 
         <div id="formContent" style="display:none;">
-            <select id="turnoSelect"><option value="Manhã">Turno: Manhã</option><option value="Tarde">Turno: Tarde</option></select>
-            <input type="text" id="nomeFunc" placeholder="Nome do Funcionário">
+            <input type="text" id="nomeFunc" placeholder="Seu Nome (Funcionário)">
             
-            <div id="listaItens" style="margin-top:15px;"></div>
+            <select id="turnoSelect">
+                <option value="Manhã">Turno: Manhã</option>
+                <option value="Tarde">Turno: Tarde</option>
+            </select>
+
+            <div id="listaItens" style="margin-top:20px;">
+                </div>
             
-            <textarea id="obs" placeholder="Alguma avaria ou observação? (Opcional)"></textarea>
+            <textarea id="obs" rows="2" placeholder="Observações ou Avarias (Opcional)"></textarea>
             
-            <button id="btnEnviar" class="btn" onclick="enviarSobra()">FINALIZAR CONFERÊNCIA</button>
+            <button id="btnEnviar" class="btn" onclick="enviarSobra()">FINALIZAR E ENVIAR</button>
         </div>
     </div>
 
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwymkSXlXjQj27nWokMK9nNSystwUnDXCUqV_b2QcfDRCswl_DhTDJ06ozslFf_FA1h/exec";
         
-        async function init() {
+        async function carregarProdutosDoDia() {
             try {
+                // Busca no script apenas os produtos que tiveram movimento hoje
                 const res = await fetch(SCRIPT_URL + "?action=getProdutos");
                 const produtos = await res.json();
                 const container = document.getElementById('listaItens');
                 
-                if(produtos.length === 0) {
-                    container.innerHTML = "<p>Nenhum produto cadastrado no ADM.</p>";
+                if(!produtos || produtos.length === 0) {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('erroStatus').style.display = 'block';
                 } else {
+                    container.innerHTML = "";
                     produtos.forEach(item => {
-                        container.innerHTML += `<div class="item-row"><span>${item}</span><input type="number" class="sobra-input" data-prod="${item}" placeholder="0"></div>`;
+                        container.innerHTML += `
+                            <div class="item-row">
+                                <span class="item-name">${item}</span>
+                                <input type="number" class="sobra-input" data-prod="${item}" placeholder="0" min="0">
+                            </div>`;
                     });
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('formContent').style.display = 'block';
                 }
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('formContent').style.display = 'block';
-            } catch(e) { document.getElementById('loading').innerText = "Erro de conexão."; }
+            } catch(e) {
+                document.getElementById('loading').innerText = "Erro ao conectar com o servidor.";
+            }
         }
 
         async function enviarSobra() {
@@ -61,26 +81,42 @@
             if(!nome) return alert("Por favor, digite seu nome.");
             
             const btn = document.getElementById('btnEnviar');
-            btn.innerText = "ENVIANDO..."; btn.disabled = true;
+            const inputsSobra = Array.from(document.querySelectorAll('.sobra-input'));
+            
+            // Filtra apenas o que foi preenchido
+            const itensParaEnviar = inputsSobra
+                .filter(i => i.value !== "")
+                .map(i => ({ produto: i.dataset.prod, qtd: parseInt(i.value) }));
 
-            const itens = Array.from(document.querySelectorAll('.sobra-input'))
-                .filter(i => i.value !== "").map(i => ({ produto: i.dataset.prod, qtd: parseInt(i.value) }));
+            if(itensParaEnviar.length === 0) return alert("Preencha a quantidade de pelo menos um item.");
 
-            await fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify({
-                    action: "sobra",
-                    funcionario: nome,
-                    turno: document.getElementById('turnoSelect').value,
-                    observacao: document.getElementById('obs').value,
-                    itens: itens
-                })
-            });
-            alert("Dados enviados com sucesso!");
-            location.reload();
+            btn.innerText = "ENVIANDO DADOS...";
+            btn.disabled = true;
+
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({
+                        action: "sobra",
+                        funcionario: nome,
+                        turno: document.getElementById('turnoSelect').value,
+                        observacao: document.getElementById('obs').value,
+                        itens: itensParaEnviar
+                    })
+                });
+                
+                alert("Conferência realizada com sucesso!");
+                location.reload(); // Limpa a tela para a próxima
+            } catch (e) {
+                alert("Erro ao enviar. Verifique a internet.");
+                btn.innerText = "FINALIZAR E ENVIAR";
+                btn.disabled = false;
+            }
         }
-        init();
+
+        // Inicia a busca assim que a página abre
+        carregarProdutosDoDia();
     </script>
 </body>
 </html>
