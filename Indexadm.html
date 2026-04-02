@@ -2,104 +2,103 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gullas ADM</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <style>
         :root { --primary: #f59e0b; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; padding: 15px; margin: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; padding: 15px; text-align: center; }
         #login { position: fixed; inset: 0; background: white; display: flex; align-items: center; justify-content: center; z-index: 1000; flex-direction: column; }
-        .logo-img-adm { width: 100px; height: auto; margin-bottom: 20px; }
-        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        input, select { padding: 12px; border: 1px solid #ddd; border-radius: 8px; width: 100%; box-sizing: border-box; }
-        .btn { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; background: var(--primary); color: white; margin-top: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: center; font-size: 0.9rem; }
+        .card { background: white; border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        input, select { padding: 12px; border: 1px solid #ddd; border-radius: 10px; width: 100%; margin-bottom: 10px; box-sizing: border-box; }
+        .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; border-bottom: 1px solid #eee; font-size: 0.85rem; }
+        .img-preview { width: 50px; height: 50px; object-fit: cover; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
     <div id="login">
-        <img src="1774954149094.png" alt="Gullas Logo" class="logo-img-adm">
-        <h2 style="color:var(--primary); margin-top:0;">Acesso ADM</h2>
-        <input type="password" id="pass" placeholder="Senha" style="width:200px;"><br>
+        <img src="https://github.com/joscelis/gullas/blob/main/1774954149094.png?raw=true" style="width:120px; margin-bottom:20px">
+        <input type="password" id="pass" placeholder="Senha ADM" style="width:200px;">
         <button class="btn" style="width:200px" onclick="entrar()">ENTRAR</button>
     </div>
 
     <div id="adm" style="display:none;">
+        <img src="https://github.com/joscelis/gullas/blob/main/1774954149094.png?raw=true" style="width:80px;">
+        
         <div class="card">
-            <h3>✨ Novo Item / Envio</h3>
-            <div style="display:flex; gap:5px; margin-bottom:10px">
-                <input type="text" id="novoItem" placeholder="Nome novo item">
-                <button class="btn" style="margin:0; width:80px; background:#10b981" onclick="addCardapio()">ADD</button>
+            <h3>🚚 Enviar Novo Produto</h3>
+            <div style="display:flex; gap:5px;">
+                <input type="text" id="novoItem" placeholder="Nome do item">
+                <input type="number" id="qtdEnvio" placeholder="Qtd" style="width:100px">
             </div>
-            <select id="sel"></select>
-            <input type="number" id="qtd" placeholder="Quantidade" style="margin-top:10px;">
-            <button class="btn" onclick="enviarEnvio()">REGISTAR ENVIO</button>
+            <button class="btn" onclick="enviar()">REGISTRAR E ENVIAR</button>
         </div>
 
         <div class="card">
-            <h3>📊 Balanço de Vendas</h3>
-            <table id="tab">
-                <thead><tr><th style="text-align:left">Produto</th><th>Envio</th><th>Sobra</th><th>Venda</th></tr></thead>
-                <tbody id="corpo"></tbody>
+            <h3>📊 Balanço e Relatório</h3>
+            <button class="btn" style="background:#10b981; margin-bottom:10px;" onclick="gerarPDF()">📄 BAIXAR PDF DAS VENDAS</button>
+            <table id="tabelaVendas">
+                <thead><tr><th style="text-align:left">Produto</th><th>Env</th><th>Sob</th><th>Venda</th></tr></thead>
+                <tbody id="corpoBalanço"></tbody>
             </table>
-            <button class="btn" style="background:#64748b" onclick="carregarDados()">🔄 ATUALIZAR TABELA</button>
+            <button class="btn" style="background:#64748b; margin-top:10px" onclick="carregarDados()">🔄 ATUALIZAR</button>
         </div>
+
+        <div id="sessaoFotos"></div>
     </div>
 
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwymkSXlXjQj27nWokMK9nNSystwUnDXCUqV_b2QcfDRCswl_DhTDJ06ozslFf_FA1h/exec";
-        let cardapio = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
 
         function entrar() {
             if(document.getElementById('pass').value === "389180") {
                 document.getElementById('login').style.display = 'none';
                 document.getElementById('adm').style.display = 'block';
-                atualizarLista();
                 carregarDados();
-            } else { alert("Senha Incorreta!"); }
+            } else { alert("Senha incorreta!"); }
         }
 
-        function atualizarLista() {
-            const s = document.getElementById('sel'); s.innerHTML = "";
-            cardapio.forEach(p => s.innerHTML += `<option value="${p}">${p}</option>`);
-        }
-
-        function addCardapio() {
-            const n = document.getElementById('novoItem').value;
-            if(n && !cardapio.includes(n)) { cardapio.push(n); atualizarLista(); document.getElementById('novoItem').value = ""; }
-        }
-
-        async function enviarEnvio() {
-            const p = document.getElementById('sel').value, q = document.getElementById('qtd').value;
-            if(!q) return alert("Digite a quantidade!");
+        async function enviar() {
+            const p = document.getElementById('novoItem').value, q = document.getElementById('qtdEnvio').value;
+            if(!p || !q) return alert("Preencha produto e quantidade!");
             await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "envio", produto: p, qtd: q }) });
-            alert("Envio registado!"); document.getElementById('qtd').value = ""; carregarDados();
+            alert("Enviado com sucesso!");
+            document.getElementById('novoItem').value = ""; document.getElementById('qtdEnvio').value = "";
+            carregarDados();
         }
 
         async function carregarDados() {
-            const corpo = document.getElementById('corpo');
-            corpo.innerHTML = "<tr><td colspan='4'>A carregar dados...</td></tr>";
+            const corpo = document.getElementById('corpoBalanço');
+            corpo.innerHTML = "<tr><td colspan='4'>Carregando...</td></tr>";
             try {
                 const res = await fetch(SCRIPT_URL);
                 const rows = await res.json();
                 const resumo = {};
-                cardapio.forEach(p => resumo[p] = {e:0, s:0});
-
+                
                 rows.slice(1).forEach(r => {
                     const tipo = r[1], prod = r[2], qtd = parseInt(r[3])||0;
-                    if(resumo[prod]) {
-                        if(tipo === "ENVIO") resumo[prod].e += qtd;
-                        if(tipo === "SOBRA") resumo[prod].s += qtd;
-                    }
+                    if(!resumo[prod]) resumo[prod] = {e:0, s:0};
+                    if(tipo === "ENVIO") resumo[prod].e += qtd;
+                    if(tipo === "SOBRA") resumo[prod].s += qtd;
                 });
 
                 corpo.innerHTML = "";
-                cardapio.forEach(p => {
+                for(let p in resumo) {
                     const v = resumo[p].e - resumo[p].s;
-                    if(resumo[p].e > 0 || resumo[p].s > 0)
-                        corpo.innerHTML += `<tr><td style="text-align:left">${p}</td><td>${resumo[p].e}</td><td>${resumo[p].s}</td><td style="font-weight:bold;color:green">${v>0?v:0}</td></tr>`;
-                });
-            } catch(e) { corpo.innerHTML = "<tr><td colspan='4' style='color:red'>Erro ao ler dados.</td></tr>"; }
+                    corpo.innerHTML += `<tr><td style="text-align:left">${p}</td><td>${resumo[p].e}</td><td>${resumo[p].s}</td><td style="font-weight:bold;color:green">${v>0?v:0}</td></tr>`;
+                }
+            } catch(e) { corpo.innerHTML = "Erro ao carregar."; }
+        }
+
+        function gerarPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text("Relatório Gullas - " + new Date().toLocaleDateString(), 14, 15);
+            doc.autoTable({ html: '#tabelaVendas', startY: 25 });
+            doc.save("Vendas_Gullas.pdf");
         }
     </script>
 </body>
