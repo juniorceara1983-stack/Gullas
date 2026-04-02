@@ -8,155 +8,134 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <style>
         :root { --primary: #f59e0b; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; padding: 15px; text-align: center; margin: 0; }
-        #login { position: fixed; inset: 0; background: white; display: flex; align-items: center; justify-content: center; z-index: 1000; flex-direction: column; }
-        .card { background: white; border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        input, select { padding: 12px; border: 1px solid #ddd; border-radius: 10px; width: 100%; margin-bottom: 10px; box-sizing: border-box; }
-        .btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
-        th, td { padding: 10px; border-bottom: 1px solid #eee; font-size: 0.85rem; text-align: center; }
-        .badge-obs { background: #fef3c7; border-left: 4px solid var(--primary); padding: 10px; margin-top: 10px; text-align: left; font-size: 0.85rem; border-radius: 4px; }
-        .img-preview { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-top: 5px; cursor: pointer; border: 1px solid #ddd; }
+        body { font-family: sans-serif; background: #f1f5f9; text-align: center; padding: 15px; margin: 0; }
+        .card { background: white; border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        input { padding: 12px; border: 1px solid #ddd; border-radius: 10px; width: 100%; margin-bottom: 10px; box-sizing: border-box; }
+        .btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; font-weight: bold; width: 100%; cursor: pointer; transition: 0.2s; }
+        .btn:active { opacity: 0.8; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; background: white; }
+        th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: center; }
+        th { background: #f8fafc; color: #64748b; text-transform: uppercase; font-size: 0.7rem; }
     </style>
 </head>
 <body>
-
-    <div id="login">
-        <img src="https://github.com/joscelis/gullas/blob/main/1774954149094.png?raw=true" style="width:120px; margin-bottom:20px">
-        <input type="password" id="pass" placeholder="Senha ADM">
-        <button class="btn" style="width:200px" onclick="entrar()">ENTRAR</button>
+    <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" style="width:100px; margin-bottom:10px;">
+    
+    <div class="card">
+        <h3>🚚 Registrar Envio</h3>
+        <input type="text" id="p" placeholder="Nome do Produto (Ex: Coxinha)">
+        <input type="number" id="q" placeholder="Quantidade Enviada">
+        <button class="btn" id="btnEnv" onclick="enviar()">ENVIAR PARA LOJA</button>
     </div>
 
-    <div id="adm" style="display:none;">
-        <img src="https://github.com/joscelis/gullas/blob/main/1774954149094.png?raw=true" style="width:80px; margin-bottom:10px;">
+    <div class="card">
+        <h3>📊 Balanço de Vendas</h3>
+        <table id="tabelaVendas">
+            <thead>
+                <tr>
+                    <th style="text-align:left">Item</th>
+                    <th>Env</th>
+                    <th>Sob</th>
+                    <th>Ven</th>
+                </tr>
+            </thead>
+            <tbody id="corpo"></tbody>
+        </table>
         
-        <div class="card">
-            <h3>🚚 Produção / Envio</h3>
-            <input type="text" id="novoItem" placeholder="Nome do Produto">
-            <input type="number" id="qtdEnvio" placeholder="Quantidade">
-            <button class="btn" onclick="enviarEnvio()">REGISTRAR ENVIO</button>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:20px;">
+            <button class="btn" style="background:#10b981" onclick="gerarPDF()">📄 BAIXAR PDF</button>
+            <button class="btn" style="background:#ef4444" onclick="fecharCaixa()">🔒 FECHAR CX</button>
         </div>
-
-        <div class="card">
-            <h3>📊 Balanço de Vendas (Hoje)</h3>
-            <table id="tabelaVendas">
-                <thead>
-                    <tr>
-                        <th style="text-align:left">Produto</th>
-                        <th>Env</th>
-                        <th>Sob</th>
-                        <th>Venda</th>
-                    </tr>
-                </thead>
-                <tbody id="corpoBalanço"></tbody>
-            </table>
-            <div style="display:flex; gap:8px; margin-top:15px;">
-                <button class="btn" style="background:#10b981" onclick="gerarPDF()">📄 PDF</button>
-                <button class="btn" style="background:#ef4444" onclick="fecharCaixa()">🔒 FECHAR CAIXA</button>
-            </div>
-            <button class="btn" style="background:#64748b; margin-top:10px;" onclick="carregarDados()">🔄 ATUALIZAR LISTA</button>
-        </div>
-
-        <div class="card" id="cardObs" style="display:none;">
-            <h3>📢 Ocorrências e Fotos</h3>
-            <div id="listaObs"></div>
-        </div>
+        <button class="btn" style="background:#64748b; margin-top:10px;" onclick="carregar()">🔄 ATUALIZAR</button>
     </div>
 
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwymkSXlXjQj27nWokMK9nNSystwUnDXCUqV_b2QcfDRCswl_DhTDJ06ozslFf_FA1h/exec";
+        
+        // Itens que sempre devem aparecer na lista
+        const itensFixos = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
 
-        function entrar() {
-            if(document.getElementById('pass').value === "389180") {
-                document.getElementById('login').style.display = 'none';
-                document.getElementById('adm').style.display = 'block';
-                carregarDados();
-            } else { alert("Senha Incorreta!"); }
-        }
-
-        async function enviarEnvio() {
-            const p = document.getElementById('novoItem').value;
-            const q = document.getElementById('qtdEnvio').value;
-            if(!p || !q) return alert("Preencha produto e quantidade!");
+        async function enviar() {
+            const prod = document.getElementById('p').value;
+            const qtd = document.getElementById('q').value;
+            if(!prod || !qtd) return alert("Preencha o produto e a quantidade!");
             
-            const btn = event.target;
+            const btn = document.getElementById('btnEnv');
             btn.innerText = "ENVIANDO..."; btn.disabled = true;
 
             await fetch(SCRIPT_URL, { 
                 method: 'POST', 
                 mode: 'no-cors', 
-                body: JSON.stringify({ action: "envio", produto: p, qtd: q }) 
+                body: JSON.stringify({ action: "envio", produto: prod, qtd: parseInt(qtd) })
             });
-
-            alert("Produto enviado para a loja!");
-            document.getElementById('novoItem').value = "";
-            document.getElementById('qtdEnvio').value = "";
-            btn.innerText = "REGISTRAR ENVIO"; btn.disabled = false;
-            carregarDados();
+            
+            alert("Enviado!");
+            document.getElementById('p').value = "";
+            document.getElementById('q').value = "";
+            btn.innerText = "ENVIAR PARA LOJA"; btn.disabled = false;
+            carregar();
         }
 
-        async function carregarDados() {
-            const corpo = document.getElementById('corpoBalanço');
-            const obsDiv = document.getElementById('listaObs');
+        async function carregar() {
+            const corpo = document.getElementById('corpo');
             corpo.innerHTML = "<tr><td colspan='4'>Carregando...</td></tr>";
             
             try {
                 const res = await fetch(SCRIPT_URL);
                 const rows = await res.json();
                 const resumo = {};
-                let temObs = false;
-                obsDiv.innerHTML = "";
 
-                // Começa do index 1 para pular o cabeçalho
+                // Inicia os fixos com zero
+                itensFixos.forEach(f => resumo[f] = {e:0, s:0});
+
+                // Processa o que vem da planilha (após o último fechamento)
                 rows.slice(1).forEach(r => {
-                    const [data, tipo, prod, qtd, turno, func, obs, foto] = r;
-                    
-                    if(!resumo[prod]) resumo[prod] = {e:0, s:0};
-                    if(tipo === "ENVIO") resumo[prod].e += parseInt(qtd);
-                    if(tipo === "SOBRA") resumo[prod].s += parseInt(qtd);
-
-                    if(obs || foto) {
-                        temObs = true;
-                        obsDiv.innerHTML += `
-                            <div class="badge-obs">
-                                <strong>${func} (${turno}):</strong> ${obs || "Apenas foto."}<br>
-                                ${foto ? `<a href="${foto}" target="_blank"><img src="${foto}" class="img-preview"></a>` : ""}
-                            </div>`;
-                    }
+                    const tipo = r[1], prod = r[2], qtd = parseInt(r[3]) || 0;
+                    if(!resumo[prod]) resumo[prod] = {e:0, s:0}; 
+                    if(tipo === "ENVIO") resumo[prod].e += qtd;
+                    if(tipo === "SOBRA") resumo[prod].s += qtd;
                 });
 
                 corpo.innerHTML = "";
                 for(let p in resumo) {
                     const v = resumo[p].e - resumo[p].s;
-                    corpo.innerHTML += `
-                        <tr>
-                            <td style="text-align:left">${p}</td>
-                            <td>${resumo[p].e}</td>
-                            <td>${resumo[p].s}</td>
-                            <td style="color:green; font-weight:bold;">${v > 0 ? v : 0}</td>
-                        </tr>`;
+                    // Mostra se for fixo OU se teve movimento
+                    if(itensFixos.includes(p) || resumo[p].e > 0 || resumo[p].s > 0) {
+                        corpo.innerHTML += `
+                            <tr>
+                                <td style="text-align:left">${p}</td>
+                                <td>${resumo[p].e}</td>
+                                <td>${resumo[p].s}</td>
+                                <td style="font-weight:bold;color:${v > 0 ? 'green' : '#334155'}">${v > 0 ? v : 0}</td>
+                            </tr>`;
+                    }
                 }
-                
-                document.getElementById('cardObs').style.display = temObs ? 'block' : 'none';
-
-            } catch(e) { corpo.innerHTML = "<tr><td colspan='4'>Erro ao ler dados.</td></tr>"; }
+            } catch(e) { corpo.innerHTML = "<tr><td colspan='4'>Erro ao carregar.</td></tr>"; }
         }
 
-        function fecharCaixa() {
-            if(confirm("Deseja fechar o caixa de hoje? O painel ficará limpo para novos registros amanhã.")) {
-                // A limpeza é automática pelo script porque ele filtra por data
-                location.reload();
-            }
+        async function fecharCaixa() {
+            if(!confirm("Deseja fechar o caixa agora? Isso vai zerar o painel para o próximo turno.")) return;
+            await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "fechar" })});
+            alert("Caixa Fechado! O painel agora está limpo.");
+            location.reload();
         }
 
         function gerarPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             const dataRel = new Date().toLocaleDateString('pt-BR');
-            doc.text("Gullas - Relatório de Vendas: " + dataRel, 14, 15);
-            doc.autoTable({ html: '#tabelaVendas', startY: 25, theme: 'grid', headStyles: {fillColor: [245, 158, 11]} });
+            
+            doc.text("Gullas - Relatório de Vendas - " + dataRel, 14, 15);
+            doc.autoTable({ 
+                html: '#tabelaVendas', 
+                startY: 25,
+                theme: 'grid',
+                headStyles: { fillColor: [245, 158, 11] }
+            });
             doc.save("Vendas_Gullas_" + dataRel + ".pdf");
         }
+
+        carregar();
     </script>
 </body>
 </html>
