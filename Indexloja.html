@@ -3,31 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gullas - Conferência e Qualidade</title>
+    <title>Gullas - Loja</title>
     <style>
-        :root { --primary: #f59e0b; --secondary: #1e293b; --bg: #f1f5f9; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; }
-        .container { max-width: 400px; margin: auto; background: white; border-radius: 20px; padding: 20px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); border-top: 8px solid var(--primary); }
+        :root { --primary: #f59e0b; --bg: #ffffff; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f8fafc; margin: 0; padding: 15px; }
+        .container { max-width: 400px; margin: auto; background: white; border-radius: 20px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-top: 8px solid var(--primary); }
         .header { text-align: center; margin-bottom: 20px; }
-        .logo-img { width: 120px; margin-bottom: 10px; }
-        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #e2e8f0; }
-        .item-name { font-weight: 600; color: var(--secondary); }
-        input[type="number"] { width: 70px; padding: 8px; border: 2px solid #cbd5e1; border-radius: 8px; text-align: center; font-weight: bold; }
-        input[type="text"], select, textarea { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 2px solid #cbd5e1; box-sizing: border-box; font-family: inherit; }
-        
-        /* Estilo para a área de foto */
-        .photo-area { background: #f8fafc; border: 2px dashed #cbd5e1; padding: 15px; text-align: center; border-radius: 12px; cursor: pointer; margin-bottom: 15px; }
-        #preview { width: 100%; max-height: 200px; object-fit: contain; display: none; margin-top: 10px; border-radius: 8px; }
-        
-        .btn { background: var(--primary); color: white; border: none; width: 100%; padding: 16px; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin-top: 10px; }
-        .btn:disabled { background: #cbd5e1; }
+        .logo-img { width: 120px; }
+        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+        input, select, textarea { width: 100%; padding: 12px; margin-top: 5px; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box; }
+        .sobra-input { width: 80px; text-align: center; font-weight: bold; }
+        .photo-area { background: #f1f5f9; border: 2px dashed #cbd5e1; padding: 15px; text-align: center; border-radius: 12px; cursor: pointer; margin: 15px 0; }
+        #preview { width: 100%; max-height: 150px; object-fit: contain; display: none; margin-top: 10px; border-radius: 8px; }
+        .btn { background: var(--primary); color: white; border: none; width: 100%; padding: 16px; border-radius: 10px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h2 style="color: var(--secondary); margin: 0;">GULLAS - CONFERÊNCIA</h2>
-            <p style="font-size: 0.8rem; color: #64748b;">Registre as sobras e ocorrências</p>
+            <img src="1774954149094.png" class="logo-img">
+            <h2 style="margin:0; color:var(--primary);">CONFERÊNCIA GULLAS</h2>
         </div>
 
         <select id="turnoSelect">
@@ -35,36 +30,30 @@
             <option value="Tarde">Turno: Tarde</option>
         </select>
         
-        <input type="text" id="nomeFunc" placeholder="Seu Nome">
+        <input type="text" id="nomeFunc" placeholder="Nome do Funcionário">
 
         <div id="listaItens"></div>
 
-        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-
-        <label style="font-weight: bold; color: var(--secondary); display: block; margin-bottom: 5px;">Houve alguma perda/avaria?</label>
-        <textarea id="obs" placeholder="Ex: 2 empadas quebradas no transporte / Bolo vencido." rows="3"></textarea>
+        <label style="display:block; margin-top:15px; font-weight:bold;">Algum produto estragou ou venceu?</label>
+        <textarea id="obs" rows="2" placeholder="Descreva aqui o ocorrido..."></textarea>
 
         <div class="photo-area" onclick="document.getElementById('inputFoto').click()">
             <span id="txtFoto">📸 Foto da Ocorrência (Opcional)</span>
-            <input type="file" id="inputFoto" accept="image/jpeg, image/png" style="display:none" onchange="processarFoto(this)">
+            <input type="file" id="inputFoto" accept="image/*" style="display:none" onchange="processarFoto(this)">
             <img id="preview">
         </div>
-        
-        <button id="btnEnviar" class="btn" onclick="enviarSobra()">FINALIZAR E ENVIAR</button>
+
+        <button id="btnEnviar" class="btn" onclick="enviarSobra()">ENVIAR CONFERÊNCIA</button>
     </div>
 
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzip6qASNtkcRNBWMINpQWVoxU71AL0Ajws_BmzobGdEBA23fa0-WvqX3GjIZf_me_1/exec";
-        const itensAtivos = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-Tx_2RqLERiALStmIUt_Q4CJICttL1ETNMhMIqs5E0_dywxs6sIMMXHfV0WisSMs8/exec";
+        const itensPadrao = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
         let fotoBase64 = "";
 
         const container = document.getElementById('listaItens');
-        itensAtivos.forEach(item => {
-            container.innerHTML += `
-                <div class="item-row">
-                    <span class="item-name">${item}</span>
-                    <input type="number" class="sobra-input" data-prod="${item}" placeholder="0">
-                </div>`;
+        itensPadrao.forEach(item => {
+            container.innerHTML += `<div class="item-row"><span>${item}</span><input type="number" class="sobra-input" data-prod="${item}" placeholder="0"></div>`;
         });
 
         function processarFoto(input) {
@@ -74,18 +63,12 @@
                     const img = new Image();
                     img.onload = function() {
                         const canvas = document.createElement('canvas');
-                        // Comprimindo para não estourar o limite da planilha
-                        const MAX_WIDTH = 600;
-                        const scale = MAX_WIDTH / img.width;
-                        canvas.width = MAX_WIDTH;
-                        canvas.height = img.height * scale;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        
-                        fotoBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                        const scale = 400 / img.width;
+                        canvas.width = 400; canvas.height = img.height * scale;
+                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                        fotoBase64 = canvas.toDataURL('image/jpeg', 0.6);
                         document.getElementById('preview').src = fotoBase64;
                         document.getElementById('preview').style.display = 'block';
-                        document.getElementById('txtFoto').innerText = "Foto Selecionada ✅";
                     }
                     img.src = e.target.result;
                 }
@@ -95,40 +78,29 @@
 
         async function enviarSobra() {
             const nome = document.getElementById('nomeFunc').value;
-            const turno = document.getElementById('turnoSelect').value;
-            const observacao = document.getElementById('obs').value;
+            if(!nome) return alert("Escreva o seu nome!");
             const btn = document.getElementById('btnEnviar');
+            btn.innerText = "ENVIANDO..."; btn.disabled = true;
 
-            if(!nome) return alert("Por favor, digite seu nome.");
-
-            btn.innerText = "ENVIANDO DADOS..."; btn.disabled = true;
-
-            const inputs = document.querySelectorAll('.sobra-input');
-            const itens = Array.from(inputs)
-                .filter(i => i.value !== "")
-                .map(i => ({ produto: i.dataset.prod, qtd: parseInt(i.value) }));
-
-            const dadosParaEnviar = {
-                action: "sobra",
-                funcionario: nome,
-                turno: turno,
-                itens: itens,
-                observacao: observacao,
-                foto: fotoBase64
-            };
+            const itens = Array.from(document.querySelectorAll('.sobra-input'))
+                .filter(i => i.value !== "").map(i => ({ produto: i.dataset.prod, qtd: parseInt(i.value) }));
 
             try {
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors',
-                    body: JSON.stringify(dadosParaEnviar)
+                    body: JSON.stringify({
+                        action: "sobra",
+                        funcionario: nome,
+                        turno: document.getElementById('turnoSelect').value,
+                        observacao: document.getElementById('obs').value,
+                        foto: fotoBase64,
+                        itens: itens
+                    })
                 });
-                alert("Conferência e ocorrências enviadas com sucesso!");
+                alert("Sucesso! Dados enviados.");
                 location.reload();
-            } catch (e) {
-                alert("Erro ao enviar. Verifique sua conexão.");
-                btn.disabled = false; btn.innerText = "FINALIZAR E ENVIAR";
-            }
+            } catch (e) { alert("Erro de conexão."); btn.disabled = false; }
         }
     </script>
 </body>
