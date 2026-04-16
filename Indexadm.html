@@ -1,259 +1,680 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gullas ADM - Gestão</title>
-    
-    <link rel="manifest" href="manifest-adm.json">
-    <meta name="theme-color" content="#f59e0b">
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js');
-      }
-    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Gullas ADM</title>
+  <link rel="manifest" href="manifest-adm.json">
+  <meta name="theme-color" content="#1e293b">
+  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    :root {
+      --primary: #f59e0b; --primary-d: #d97706;
+      --bg: #f1f5f9; --card: #fff;
+      --text: #1e293b; --muted: #64748b; --border: #e2e8f0;
+      --success: #10b981; --danger: #ef4444; --r: 14px;
+    }
+    *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+           background: var(--bg); margin: 0; color: var(--text); min-height: 100vh; }
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-    <style>
-        :root { --primary: #f59e0b; --bg: #f1f5f9; --danger: #ef4444; }
-        body { font-family: sans-serif; background: var(--bg); text-align: center; padding: 15px; margin: 0; color: #334155; }
-        .logo { width: 100px; margin-bottom: 10px; }
-        .card { background: white; border-radius: 16px; padding: 18px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        h3 { margin: 0 0 15px 0; font-size: 1rem; text-transform: uppercase; color: #1e293b; }
-        
-        .btn-lista-toggle { background: white; color: var(--primary); border: 2px solid var(--primary); padding: 15px; border-radius: 12px; width: 100%; font-weight: bold; font-size: 1rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; }
-        #listaProducao { display: none; padding: 10px; background: #fffcf5; border-radius: 0 0 12px 12px; border: 1px solid #ffeeba; border-top: none; margin-bottom: 15px; }
-        
-        .prod-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
-        .prod-name { font-weight: 500; font-size: 0.9rem; text-align: left; flex: 1; }
-        .q-massa { width: 65px; padding: 8px; border: 2px solid #ddd; border-radius: 8px; text-align: center; font-weight: bold; }
-        
-        .btn-novo-item { background: #e2e8f0; color: #475569; border: none; padding: 8px 15px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .item-novo-container { display: none; background: #fffbeb; padding: 12px; border-radius: 12px; margin-top: 10px; }
-        .input-text { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; margin-bottom: 10px; box-sizing: border-box; }
+    /* ── Screens ── */
+    .screen { display: none; min-height: 100vh; flex-direction: column; }
+    .screen.active { display: flex; }
 
-        .btn-main { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; width: 100%; cursor: pointer; font-size: 1rem; margin-top: 10px; transition: 0.2s; }
-        .btn-main:active { transform: scale(0.98); }
+    /* ── Login ── */
+    .login-bg { flex: 1; background: #0f172a; display: flex; flex-direction: column;
+                align-items: center; justify-content: center; padding: 32px 24px; }
+    .login-logo  { width: 100px; border-radius: 22px; margin-bottom: 20px;
+                   box-shadow: 0 4px 20px rgba(0,0,0,.4); }
+    .login-title { color: white; font-size: 1.2rem; font-weight: 800; margin-bottom: 4px; }
+    .login-sub   { color: #64748b; font-size: .9rem; margin-bottom: 28px; }
+    .inp-dark { width: 100%; max-width: 320px; padding: 14px; border: 2px solid #1e293b;
+                border-radius: var(--r); font-size: 1rem; background: #1e293b; color: white;
+                outline: none; margin-bottom: 12px; transition: border-color .2s; }
+    .inp-dark:focus { border-color: var(--primary); }
+    .inp-dark::placeholder { color: #475569; }
 
-        /* Modais Melhorados */
-        .modal-overlay { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; backdrop-filter: blur(3px); }
-        .modal-content { background: white; width: 85%; max-width: 350px; padding: 30px; border-radius: 25px; text-align: center; animation: pop 0.3s ease; }
-        @keyframes pop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .modal-logo { width: 80px; margin-bottom: 15px; }
-        .modal-text { color: #444; font-size: 1.1rem; margin-bottom: 20px; line-height: 1.4; }
+    /* ── Header ── */
+    .hdr { background: #1e293b; padding: 11px 16px; display: flex; align-items: center; gap: 10px; }
+    .hdr-logo   { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
+    .hdr-title  { color: white; font-weight: 700; font-size: 1rem; flex: 1; }
+    .hdr-badge  { background: var(--primary); color: white; font-size: .7rem; font-weight: 800;
+                  padding: 3px 8px; border-radius: 20px; }
+    .hdr-logout { background: none; border: none; color: #64748b; font-size: 1.15rem; cursor: pointer; padding: 4px; }
 
-        /* Estilo das Observações */
-        #secaoObs { background: #fff1f2; border: 1px solid #fecaca; padding: 12px; border-radius: 12px; margin-top: 15px; text-align: left; display: none; }
-    </style>
+    /* ── Tabs ── */
+    .tab-bar { display: flex; background: #0f172a; overflow-x: auto; scrollbar-width: none; }
+    .tab-bar::-webkit-scrollbar { display: none; }
+    .tab-btn { flex: 1; min-width: 78px; padding: 12px 4px; border: none; background: transparent;
+               font-size: .76rem; font-weight: 600; color: #64748b; cursor: pointer;
+               border-bottom: 3px solid transparent; white-space: nowrap; transition: all .2s; }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab-pane { display: none; flex: 1; overflow-y: auto; padding-bottom: 24px; }
+    .tab-pane.active { display: block; }
+
+    /* ── Cards ── */
+    .card { background: var(--card); border-radius: var(--r); padding: 16px;
+            margin: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+    .card-title { font-size: .75rem; font-weight: 700; text-transform: uppercase;
+                  letter-spacing: .06em; color: var(--muted); margin-bottom: 14px; }
+
+    /* ── Forms ── */
+    .inp { width: 100%; padding: 12px; border: 2px solid var(--border); border-radius: 10px;
+           font-size: .95rem; outline: none; background: white; transition: border-color .2s; }
+    .inp:focus { border-color: var(--primary); }
+    .irow { display: flex; gap: 8px; }
+    .irow .inp { flex: 2; }
+    .irow .inp-sm { flex: 1; }
+
+    /* ── Buttons ── */
+    .btn { padding: 12px 16px; border: none; border-radius: 10px; font-size: .9rem;
+           font-weight: 700; cursor: pointer; transition: all .18s; }
+    .btn:active { transform: scale(.97); }
+    .btn:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-primary   { background: var(--primary); color: white; }
+    .btn-success   { background: var(--success); color: white; }
+    .btn-danger    { background: var(--danger); color: white; }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-full { width: 100%; }
+    .btn-sm   { padding: 6px 12px; font-size: .78rem; }
+    .btn-icon { background: none; border: none; cursor: pointer; padding: 5px; font-size: 1rem; }
+
+    /* ── Catalog list ── */
+    .cat-row { display: flex; align-items: center; padding: 12px 0;
+               border-bottom: 1px solid var(--border); gap: 8px; }
+    .cat-row:last-child { border-bottom: none; }
+    .cat-name  { flex: 1; font-weight: 600; font-size: .88rem; }
+    .cat-price { color: var(--success); font-weight: 700; font-size: .88rem; min-width: 68px; text-align: right; }
+    .cat-acts  { display: flex; gap: 2px; }
+
+    /* ── Table ── */
+    .tbl { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    .tbl th { text-align: left; padding: 9px 8px; border-bottom: 2px solid var(--border);
+              color: var(--muted); font-weight: 700; font-size: .72rem; text-transform: uppercase; }
+    .tbl td { padding: 9px 8px; border-bottom: 1px solid #f1f5f9; }
+    .tbl tr.total-row td { background: #f8fafc; font-weight: 800; font-size: .9rem;
+                           border-top: 2px solid var(--border); border-bottom: none; }
+    .tr  { text-align: right; }
+    .tb  { font-weight: 700; }
+    .tg  { color: var(--success); }
+    .ta  { color: var(--primary); }
+
+    /* ── KPI ── */
+    .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .kpi { background: var(--card); border-radius: var(--r); padding: 14px;
+           box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+    .kpi-lbl { font-size: .7rem; color: var(--muted); font-weight: 700;
+               text-transform: uppercase; margin-bottom: 6px; }
+    .kpi-val { font-size: 1.35rem; font-weight: 800; }
+    .kpi-val.g { color: var(--success); }
+    .kpi-val.a { color: var(--primary); }
+
+    /* ── Obs block ── */
+    .obs-item { background: #fff1f2; border-left: 3px solid var(--danger); padding: 10px 12px;
+                border-radius: 0 8px 8px 0; margin-bottom: 8px; }
+    .obs-meta { font-size: .72rem; color: var(--muted); margin-bottom: 4px; }
+    .obs-txt  { font-size: .84rem; }
+    .obs-img  { display: inline-block; color: var(--primary); font-size: .8rem;
+                font-weight: 700; text-decoration: none; margin-top: 4px; }
+
+    /* ── Date filter ── */
+    .drow { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
+    .drow .inp { flex: 1; }
+
+    /* ── Modal ── */
+    .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.65);
+                z-index: 500; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+    .modal-bg.open { display: flex; }
+    .modal { background: white; width: 88%; max-width: 360px; border-radius: 24px;
+             padding: 28px 22px; text-align: center; animation: pop .25s ease; }
+    @keyframes pop { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal-logo  { width: 64px; border-radius: 14px; margin-bottom: 14px; }
+    .modal-title { font-size: 1rem; font-weight: 800; margin-bottom: 8px; }
+    .modal-msg   { color: var(--muted); font-size: .9rem; line-height: 1.5; margin-bottom: 16px; }
+    .modal-body  { text-align: left; }
+
+    /* ── Loading / Spinner / Toast / Empty ── */
+    .loading { text-align: center; padding: 28px; color: var(--muted); font-size: .88rem; }
+    .spin { width: 26px; height: 26px; border: 3px solid var(--border); border-top-color: var(--primary);
+            border-radius: 50%; animation: sp .7s linear infinite; margin: 0 auto 10px; }
+    @keyframes sp { to { transform: rotate(360deg); } }
+    .empty { text-align: center; padding: 28px; color: var(--muted); font-size: .88rem; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+             background: #1e293b; color: white; padding: 10px 20px; border-radius: 20px;
+             font-size: .82rem; font-weight: 600; z-index: 600; display: none; white-space: nowrap; }
+    .toast.show { display: block; }
+
+    .mt-10 { margin-top: 10px; }
+    .mt-14 { margin-top: 14px; }
+    .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  </style>
 </head>
 <body>
-    <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" class="logo">
-    
+
+<!-- ══════════════════════════════════════
+     TELA 1 · LOGIN
+══════════════════════════════════════ -->
+<div id="tela-login" class="screen active">
+  <div class="login-bg">
+    <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png"
+         class="login-logo" alt="Gullas">
+    <div class="login-title">PAINEL DO ADMINISTRADOR</div>
+    <div class="login-sub">Acesso restrito</div>
+    <input id="inp-senha" type="password" class="inp-dark" placeholder="Senha…" autocomplete="current-password">
+    <button class="btn btn-primary" style="width:100%;max-width:320px;" onclick="fazerLogin()">ENTRAR</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TELA 2 · DASHBOARD
+══════════════════════════════════════ -->
+<div id="tela-principal" class="screen">
+  <div class="hdr">
+    <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png"
+         class="hdr-logo" alt="">
+    <span class="hdr-title">Gullas</span>
+    <span class="hdr-badge">ADM</span>
+    <button class="hdr-logout" onclick="fazerLogout()" title="Sair">🚪</button>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tbtn-catalogo" onclick="mudarAba('catalogo')">📋 Catálogo</button>
+    <button class="tab-btn" id="tbtn-vendas"   onclick="mudarAba('vendas')">💰 Vendas</button>
+    <button class="tab-btn" id="tbtn-sobras"   onclick="mudarAba('sobras')">📦 Sobras</button>
+    <button class="tab-btn" id="tbtn-resumo"   onclick="mudarAba('resumo')">📊 Resumo</button>
+  </div>
+
+  <!-- ── ABA CATÁLOGO ── -->
+  <div id="tpane-catalogo" class="tab-pane active">
     <div class="card">
-        <h3>Controle de Produção</h3>
-        <button class="btn-lista-toggle" id="btnToggleLista" onclick="toggleLista()">
-            ITENS PRÉ-DEFINIDOS <span>▼</span>
-        </button>
+      <div class="card-title">Adicionar Produto</div>
+      <div class="irow" style="margin-bottom:10px;">
+        <input id="cat-nome"  type="text"   class="inp" placeholder="Nome do produto" maxlength="50">
+        <input id="cat-preco" type="number" class="inp inp-sm" placeholder="R$ 0,00" min="0" step="0.01">
+      </div>
+      <button class="btn btn-primary btn-full" onclick="adicionarItem()">+ ADICIONAR</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Produtos Cadastrados</div>
+      <div id="cat-list">
+        <div class="loading"><div class="spin"></div>Carregando…</div>
+      </div>
+    </div>
+  </div>
 
-        <div id="listaProducao">
-            <button class="btn-main" id="btnMassa" onclick="enviarMassa()">REGISTRAR SELECIONADOS</button>
-        </div>
+  <!-- ── ABA VENDAS ── -->
+  <div id="tpane-vendas" class="tab-pane">
+    <div class="card">
+      <div class="card-title">Vendas por Data</div>
+      <div class="drow">
+        <input id="v-data" type="date" class="inp">
+        <button class="btn btn-primary" onclick="carregarVendas()">🔍</button>
+      </div>
+      <div id="v-table"><div class="empty">Selecione uma data e clique em 🔍</div></div>
+    </div>
+  </div>
 
-        <button class="btn-novo-item" onclick="toggleNovoItem()">+ NOVO ITEM</button>
+  <!-- ── ABA SOBRAS ── -->
+  <div id="tpane-sobras" class="tab-pane">
+    <div class="card">
+      <div class="card-title">Sobras por Data</div>
+      <div class="drow">
+        <input id="s-data" type="date" class="inp">
+        <button class="btn btn-primary" onclick="carregarSobras()">🔍</button>
+      </div>
+      <div id="s-table"><div class="empty">Selecione uma data e clique em 🔍</div></div>
+    </div>
+  </div>
 
-        <div id="containerNovo" class="item-novo-container">
-            <input type="text" id="nome_novo" class="input-text" placeholder="Nome do produto extra">
-            <input type="number" id="q_novo" class="input-text" placeholder="Quantidade">
-            <button class="btn-main" style="background:#475569; padding: 10px;" onclick="enviarNovo()">REGISTRAR EXTRA</button>
-        </div>
+  <!-- ── ABA RESUMO ── -->
+  <div id="tpane-resumo" class="tab-pane">
+    <div class="card">
+      <div class="card-title">Resumo do Dia</div>
+      <div class="drow">
+        <input id="r-data" type="date" class="inp">
+        <button class="btn btn-primary" onclick="carregarResumo()">🔍</button>
+      </div>
+    </div>
+
+    <div style="padding:0 12px;">
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-lbl">💰 Faturamento</div><div class="kpi-val g" id="kpi-fat">—</div></div>
+        <div class="kpi"><div class="kpi-lbl">🛒 Itens Vendidos</div><div class="kpi-val a" id="kpi-itens">—</div></div>
+        <div class="kpi"><div class="kpi-lbl">📦 Sobras Registradas</div><div class="kpi-val" id="kpi-sob">—</div></div>
+        <div class="kpi"><div class="kpi-lbl">⚠️ Observações</div><div class="kpi-val" id="kpi-obs">—</div></div>
+      </div>
+    </div>
+
+    <div id="resumo-obs-card" class="card" style="display:none;">
+      <div class="card-title">⚠️ Observações da Loja</div>
+      <div id="resumo-obs-list"></div>
     </div>
 
     <div class="card">
-        <h3>Balanço Geral</h3>
-        <table style="width:100%; border-collapse: collapse; font-size: 0.85rem;" id="tabelaVendas">
-            <thead>
-                <tr style="border-bottom: 2px solid #eee;">
-                    <th style="text-align:left; padding:10px;">Item</th>
-                    <th>Env</th><th>Sob</th><th>Ven</th>
-                </tr>
-            </thead>
-            <tbody id="corpoBalanço"></tbody>
-        </table>
-
-        <div id="secaoObs">
-            <p style="margin:0; font-weight:bold; color:#be123c; font-size:0.8rem;">⚠️ OBSERVAÇÕES DA LOJA:</p>
-            <div id="textoObs" style="font-size:0.85rem; color:#444; margin-top:5px; line-height:1.4;"></div>
-        </div>
-        
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:20px;">
-            <button class="btn-main" style="background:#10b981; font-size: 0.8rem;" onclick="gerarPDF()">📄 PDF</button>
-            <button class="btn-main" style="background:var(--danger); font-size: 0.8rem;" onclick="abrirConfirmacao()">🔒 FECHAR CX</button>
-        </div>
-        <button class="btn-main" style="background:#64748b; margin-top:10px;" onclick="carregar()">🔄 ATUALIZAR</button>
+      <div class="card-title">Ações</div>
+      <div class="g2">
+        <button class="btn btn-success" onclick="gerarPDF()">📄 Exportar PDF</button>
+        <button class="btn btn-danger"  onclick="abrirModalFechar()">🔒 Fechar Caixa</button>
+      </div>
     </div>
+  </div>
+</div>
 
-    <div id="modalSucesso" class="modal-overlay">
-        <div class="modal-content">
-            <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" class="modal-logo">
-            <div id="modalSucessoTexto" class="modal-text"></div>
-            <button class="btn-main" onclick="fecharModalSucesso()">ENVIADO</button>
-        </div>
+<!-- ══════════════════════════════════════
+     MODALS
+══════════════════════════════════════ -->
+
+<!-- Fechar caixa -->
+<div id="modal-fechar" class="modal-bg">
+  <div class="modal">
+    <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png"
+         class="modal-logo" alt="">
+    <div class="modal-title">Fechar Caixa?</div>
+    <div class="modal-msg">Esta ação registra o encerramento do dia.<br>O balanço será salvo na planilha.</div>
+    <button class="btn btn-danger btn-full" onclick="executarFechamento()">SIM, FECHAR CAIXA</button>
+    <button class="btn btn-secondary btn-full mt-10"
+            onclick="document.getElementById('modal-fechar').classList.remove('open')">CANCELAR</button>
+  </div>
+</div>
+
+<!-- Bíblico / Sucesso -->
+<div id="modal-ok" class="modal-bg">
+  <div class="modal">
+    <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png"
+         class="modal-logo" alt="">
+    <div class="modal-title" id="modal-ok-titulo">Pronto!</div>
+    <div class="modal-msg" id="modal-ok-msg" style="font-style:italic;"></div>
+    <button class="btn btn-primary btn-full" onclick="location.reload()">AMÉM 🙏</button>
+  </div>
+</div>
+
+<!-- Editar item -->
+<div id="modal-editar" class="modal-bg">
+  <div class="modal">
+    <div class="modal-title">Editar Produto</div>
+    <input type="hidden" id="edit-id">
+    <div class="modal-body">
+      <label style="font-size:.78rem;color:var(--muted);font-weight:700;">Nome</label>
+      <input id="edit-nome" type="text" class="inp" style="margin:4px 0 12px;">
+      <label style="font-size:.78rem;color:var(--muted);font-weight:700;">Preço (R$)</label>
+      <input id="edit-preco" type="number" class="inp" style="margin-top:4px;" min="0" step="0.01">
     </div>
-
-    <div id="modalConfirmar" class="modal-overlay">
-        <div class="modal-content">
-            <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" class="modal-logo">
-            <div class="modal-text"><b>Deseja realmente encerrar o caixa agora?</b><br><small>Esta ação zerará o balanço atual.</small></div>
-            <button class="btn-main" style="background:var(--danger)" onclick="executarFechamento()">SIM, CONFIRMAR FECHAMENTO</button>
-            <button class="btn-novo-item" style="width:100%; padding:12px; margin-top:10px;" onclick="document.getElementById('modalConfirmar').style.display='none'">CANCELAR</button>
-        </div>
+    <div class="g2 mt-14">
+      <button class="btn btn-secondary" onclick="fecharModalEditar()">CANCELAR</button>
+      <button class="btn btn-primary"   onclick="salvarEdicao()">SALVAR</button>
     </div>
+  </div>
+</div>
 
-    <div id="modalBiblico" class="modal-overlay">
-        <div class="modal-content">
-            <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" class="modal-logo">
-            <div id="textoBiblico" class="modal-text" style="font-style: italic;"></div>
-            <button class="btn-main" style="background:#333" onclick="location.reload()">AMÉM</button>
-        </div>
-    </div>
+<div id="toast" class="toast"></div>
 
-    <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwymkSXlXjQj27nWokMK9nNSystwUnDXCUqV_b2QcfDRCswl_DhTDJ06ozslFf_FA1h/exec";
-        const itensFixos = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
-        const mensagens = ["Tudo posso naquele que me fortalece. (Filipenses 4:13)", "O Senhor é o meu pastor, nada me faltará. (Salmo 23:1)", "A alegria do Senhor é a vossa força. (Neemias 8:10)", "Em tudo dai graças. (1 Tessalonicenses 5:18)", "Seja forte e corajoso! (Josué 1:9)"];
-        let obsFinal = "";
+<script>
+// ──────────────────────────────────────────────────────────────
+//  CONFIGURAÇÃO  –  cole a URL do seu Apps Script aqui
+// ──────────────────────────────────────────────────────────────
+const SCRIPT_URL = "COLE_AQUI_A_URL_DO_SEU_APPS_SCRIPT";
+// Senha padrão – altere para a sua senha desejada
+const SENHA_PADRAO = "gullas@2026";
 
-        function toggleLista() {
-            const lista = document.getElementById('listaProducao');
-            const isAberto = lista.style.display === 'block';
-            lista.style.display = isAberto ? 'none' : 'block';
-            document.getElementById('btnToggleLista').querySelector('span').innerText = isAberto ? '▼' : '▲';
-        }
+const MSGS = [
+  "Tudo posso naquele que me fortalece. (Filipenses 4:13)",
+  "O Senhor é o meu pastor, nada me faltará. (Salmo 23:1)",
+  "A alegria do Senhor é a vossa força. (Neemias 8:10)",
+  "Em tudo dai graças. (1 Tessalonicenses 5:18)",
+  "Seja forte e corajoso! (Josué 1:9)"
+];
 
-        function toggleNovoItem() {
-            const c = document.getElementById('containerNovo');
-            c.style.display = (c.style.display === 'block') ? 'none' : 'block';
-        }
+// ── Estado ──────────────────────────────────────────────────
+let catalogo   = [];
+let balanceDia = null;
 
-        function abrirModalSucesso(texto) {
-            document.getElementById('modalSucessoTexto').innerHTML = texto;
-            document.getElementById('modalSucesso').style.display = 'flex';
-        }
+// ── Init ─────────────────────────────────────────────────────
+(function init() {
+  if (localStorage.getItem('gullas_adm') === '1') {
+    ativarDashboard();
+  }
+  document.getElementById('inp-senha').addEventListener('keydown', e => {
+    if (e.key === 'Enter') fazerLogin();
+  });
+})();
 
-        function fecharModalSucesso() {
-            document.getElementById('modalSucesso').style.display = 'none';
-        }
+function ativarDashboard() {
+  const hoje = new Date().toISOString().slice(0, 10);
+  ['v-data', 's-data', 'r-data'].forEach(id => {
+    document.getElementById(id).value = hoje;
+  });
+  mostrarTela('tela-principal');
+  carregarCatalogo();
+}
 
-        function renderizarLista() {
-            const cont = document.getElementById('listaProducao');
-            const btnAcao = document.getElementById('btnMassa');
-            itensFixos.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'prod-row';
-                div.innerHTML = `<span class="prod-name">${item}</span><input type="number" class="q-massa" data-p="${item}" placeholder="0">`;
-                cont.insertBefore(div, btnAcao);
-            });
-        }
+// ── Login / Logout ───────────────────────────────────────────
+function fazerLogin() {
+  const senha  = document.getElementById('inp-senha').value;
+  const correta = localStorage.getItem('gullas_adm_senha') || SENHA_PADRAO;
+  if (senha === correta) {
+    localStorage.setItem('gullas_adm', '1');
+    ativarDashboard();
+  } else {
+    toast('Senha incorreta');
+    document.getElementById('inp-senha').value = '';
+  }
+}
 
-        async function enviarMassa() {
-            const inputs = Array.from(document.querySelectorAll('.q-massa')).filter(i => i.value !== "" && i.value > 0);
-            if(inputs.length === 0) return alert("Preencha as quantidades!");
-            
-            const btn = document.getElementById('btnMassa');
-            btn.innerText = "ENVIANDO..."; btn.disabled = true;
+function fazerLogout() {
+  localStorage.removeItem('gullas_adm');
+  mostrarTela('tela-login');
+  document.getElementById('inp-senha').value = '';
+}
 
-            for(const input of inputs) {
-                await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "envio", produto: input.dataset.p, qtd: parseInt(input.value) })});
-            }
+// ── Telas / Abas ─────────────────────────────────────────────
+function mostrarTela(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
 
-            abrirModalSucesso("<b>Produção registrada com sucesso!</b><br>Os itens foram adicionados ao balanço.");
-            toggleLista();
-            inputs.forEach(i => i.value = ""); 
-            btn.innerText = "REGISTRAR SELECIONADOS"; btn.disabled = false;
-            carregar();
-        }
+function mudarAba(aba) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('tbtn-' + aba).classList.add('active');
+  document.getElementById('tpane-' + aba).classList.add('active');
+  if (aba === 'vendas') carregarVendas();
+  else if (aba === 'sobras') carregarSobras();
+  else if (aba === 'resumo') carregarResumo();
+}
 
-        async function enviarNovo() {
-            const p = document.getElementById('nome_novo').value, q = document.getElementById('q_novo').value;
-            if(!p || !q) return alert("Preencha tudo!");
-            
-            await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "envio", produto: p, qtd: parseInt(q) })});
-            
-            abrirModalSucesso(`<b>${p}</b> registrado com sucesso!`);
-            document.getElementById('nome_novo').value = ""; document.getElementById('q_novo').value = "";
-            toggleNovoItem(); carregar();
-        }
+// ── Catálogo ─────────────────────────────────────────────────
+async function carregarCatalogo() {
+  try {
+    const r = await fetch(SCRIPT_URL + '?action=catalog');
+    catalogo = await r.json();
+    if (!Array.isArray(catalogo)) throw new Error();
+  } catch {
+    catalogo = [];
+    toast('Erro ao carregar catálogo');
+  }
+  renderCatalogo();
+}
 
-        async function carregar() {
-            try {
-                const res = await fetch(SCRIPT_URL);
-                const rows = await res.json();
-                const resumo = {};
-                obsFinal = ""; // Limpa obs
-                
-                itensFixos.forEach(f => resumo[f] = {e:0, s:0});
-                
-                rows.slice(1).forEach(r => {
-                    const tipo = r[1], prod = r[2], qtd = parseInt(r[3]) || 0, obs = r[5] || "";
-                    if(!resumo[prod]) resumo[prod] = {e:0, s:0};
-                    if(tipo === "ENVIO") resumo[prod].e += qtd;
-                    if(tipo === "SOBRA") {
-                        resumo[prod].s += qtd;
-                        if(obs) obsFinal += `• ${obs}<br>`;
-                    }
-                });
+function renderCatalogo() {
+  const div = document.getElementById('cat-list');
+  if (!catalogo.length) {
+    div.innerHTML = '<div class="empty">Nenhum produto cadastrado</div>';
+    return;
+  }
+  div.innerHTML = catalogo.map(it =>
+    `<div class="cat-row" id="cr-${it.id}">
+       <span class="cat-name">${esc(it.nome)}</span>
+       <span class="cat-price">${brl(it.preco)}</span>
+       <div class="cat-acts">
+         <button class="btn-icon" title="Editar"
+                 onclick="abrirEditar(${it.id},'${esc(it.nome)}',${it.preco})">✏️</button>
+         <button class="btn-icon" title="Remover"
+                 onclick="removerItem(${it.id},'${esc(it.nome)}')">🗑️</button>
+       </div>
+     </div>`
+  ).join('');
+}
 
-                const corpo = document.getElementById('corpoBalanço');
-                corpo.innerHTML = "";
-                for(let p in resumo) {
-                    const v = resumo[p].e - resumo[p].s;
-                    if(itensFixos.includes(p) || resumo[p].e > 0) {
-                        corpo.innerHTML += `<tr style="border-bottom:1px solid #eee;"><td style="text-align:left; padding:10px;">${p}</td><td>${resumo[p].e}</td><td>${resumo[p].s}</td><td style="font-weight:bold;">${v>0?v:0}</td></tr>`;
-                    }
-                }
+async function adicionarItem() {
+  const nome  = document.getElementById('cat-nome').value.trim();
+  const preco = parseFloat(document.getElementById('cat-preco').value) || 0;
+  if (!nome) { toast('Digite o nome do produto'); return; }
+  try {
+    await post({ action: 'addItem', nome, preco });
+    document.getElementById('cat-nome').value  = '';
+    document.getElementById('cat-preco').value = '';
+    toast(nome + ' adicionado!');
+    carregarCatalogo();
+  } catch { toast('Erro ao adicionar'); }
+}
 
-                // Mostrar Observações
-                const divObs = document.getElementById('secaoObs');
-                if(obsFinal) {
-                    divObs.style.display = 'block';
-                    document.getElementById('textoObs').innerHTML = obsFinal;
-                } else {
-                    divObs.style.display = 'none';
-                }
-            } catch(e) { console.error(e); }
-        }
+function abrirEditar(id, nome, preco) {
+  document.getElementById('edit-id').value    = id;
+  document.getElementById('edit-nome').value  = nome;
+  document.getElementById('edit-preco').value = preco;
+  document.getElementById('modal-editar').classList.add('open');
+}
+function fecharModalEditar() { document.getElementById('modal-editar').classList.remove('open'); }
 
-        function abrirConfirmacao() { document.getElementById('modalConfirmar').style.display = 'flex'; }
+async function salvarEdicao() {
+  const id    = document.getElementById('edit-id').value;
+  const nome  = document.getElementById('edit-nome').value.trim();
+  const preco = parseFloat(document.getElementById('edit-preco').value) || 0;
+  if (!nome) { toast('Digite o nome'); return; }
+  try {
+    await post({ action: 'updateItem', id, nome, preco });
+    const it = catalogo.find(i => String(i.id) === String(id));
+    if (it) { it.nome = nome; it.preco = preco; }
+    renderCatalogo();
+    fecharModalEditar();
+    toast('Salvo!');
+  } catch { toast('Erro ao salvar'); }
+}
 
-        async function executarFechamento() {
-            document.getElementById('modalConfirmar').style.display = 'none';
-            await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "fechar" })});
-            const msg = mensagens[Math.floor(Math.random() * mensagens.length)];
-            document.getElementById('textoBiblico').innerText = msg;
-            document.getElementById('modalBiblico').style.display = 'flex';
-        }
+async function removerItem(id, nome) {
+  if (!confirm(`Remover "${nome}"?`)) return;
+  try {
+    await post({ action: 'removeItem', id });
+    catalogo = catalogo.filter(i => String(i.id) !== String(id));
+    renderCatalogo();
+    toast(nome + ' removido');
+  } catch { toast('Erro ao remover'); }
+}
 
-        function gerarPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.text("Gullas - Relatorio de Producao e Sobras", 14, 15);
-            doc.autoTable({ html: '#tabelaVendas', startY: 25, theme: 'grid', headStyles: {fillColor: [245, 158, 11]} });
-            
-            if(obsFinal) {
-                const y = doc.lastAutoTable.finalY + 10;
-                doc.setTextColor(200, 0, 0);
-                doc.text("OBSERVAÇÕES DA LOJA:", 14, y);
-                doc.setTextColor(0, 0, 0);
-                doc.setFontSize(10);
-                const textoLimpo = obsFinal.replace(/<br>/g, '\n');
-                doc.text(textoLimpo, 14, y + 7);
-            }
-            
-            doc.save("Gullas_Balanço.pdf");
-        }
+// ── Vendas ────────────────────────────────────────────────────
+async function carregarVendas() {
+  const data = document.getElementById('v-data').value;
+  if (!data) { toast('Selecione uma data'); return; }
+  const div = document.getElementById('v-table');
+  div.innerHTML = '<div class="loading"><div class="spin"></div>Carregando…</div>';
+  try {
+    const r = await fetch(SCRIPT_URL + '?action=balance&date=' + data);
+    const d = await r.json();
+    balanceDia = d;
+    renderVendas(d.vendas || {});
+  } catch { div.innerHTML = '<div class="empty">Erro ao carregar</div>'; }
+}
 
-        renderizarLista(); carregar();
-    </script>
+function renderVendas(vendas) {
+  const div = document.getElementById('v-table');
+  const keys = Object.keys(vendas);
+  if (!keys.length) { div.innerHTML = '<div class="empty">Nenhuma venda registrada</div>'; return; }
+
+  let total = 0;
+  const rows = keys.map(k => {
+    const v = vendas[k];
+    const sub = v.qtd * v.preco;
+    total += sub;
+    return `<tr>
+      <td>${esc(k)}</td>
+      <td class="tr">${v.qtd}</td>
+      <td class="tr">${brl(v.preco)}</td>
+      <td class="tr tb tg">${brl(sub)}</td>
+    </tr>`;
+  }).join('');
+
+  div.innerHTML = `
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Produto</th><th class="tr">Qtd</th>
+          <th class="tr">Unit</th><th class="tr">Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td colspan="3">TOTAL</td>
+          <td class="tr tg">${brl(total)}</td>
+        </tr>
+      </tfoot>
+    </table>`;
+}
+
+// ── Sobras ────────────────────────────────────────────────────
+async function carregarSobras() {
+  const data = document.getElementById('s-data').value;
+  if (!data) { toast('Selecione uma data'); return; }
+  const div = document.getElementById('s-table');
+  div.innerHTML = '<div class="loading"><div class="spin"></div>Carregando…</div>';
+  try {
+    const r = await fetch(SCRIPT_URL + '?action=balance&date=' + data);
+    const d = await r.json();
+    renderSobras(d.sobras || {});
+  } catch { div.innerHTML = '<div class="empty">Erro ao carregar</div>'; }
+}
+
+function renderSobras(sobras) {
+  const div  = document.getElementById('s-table');
+  const keys = Object.keys(sobras);
+  if (!keys.length) { div.innerHTML = '<div class="empty">Nenhuma sobra registrada</div>'; return; }
+
+  const rows = keys.map(k =>
+    `<tr><td>${esc(k)}</td><td class="tr tb">${sobras[k]}</td></tr>`
+  ).join('');
+
+  div.innerHTML = `
+    <table class="tbl">
+      <thead><tr><th>Produto</th><th class="tr">Qtd</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ── Resumo ────────────────────────────────────────────────────
+async function carregarResumo() {
+  const data = document.getElementById('r-data').value;
+  if (!data) { toast('Selecione uma data'); return; }
+  try {
+    const r = await fetch(SCRIPT_URL + '?action=balance&date=' + data);
+    balanceDia = await r.json();
+    renderResumo(balanceDia);
+  } catch { toast('Erro ao carregar resumo'); }
+}
+
+function renderResumo(d) {
+  const vendas = d.vendas || {};
+  const sobras = d.sobras || {};
+  const obs    = d.obs    || [];
+
+  let fat = 0, nItens = 0;
+  Object.values(vendas).forEach(v => { fat += v.qtd * v.preco; nItens += v.qtd; });
+
+  const nSobras = Object.values(sobras).reduce((a, b) => a + b, 0);
+
+  document.getElementById('kpi-fat').textContent   = brl(fat);
+  document.getElementById('kpi-itens').textContent = nItens;
+  document.getElementById('kpi-sob').textContent   = nSobras;
+  document.getElementById('kpi-obs').textContent   = obs.length;
+
+  const card = document.getElementById('resumo-obs-card');
+  if (obs.length) {
+    card.style.display = 'block';
+    document.getElementById('resumo-obs-list').innerHTML = obs.map(o =>
+      `<div class="obs-item">
+         <div class="obs-meta">${esc(o.funcionario || '')} · ${o.tipo}</div>
+         <div class="obs-txt">${esc(o.obs || '')}</div>
+         ${o.imagem ? `<a class="obs-img" href="${o.imagem}" target="_blank">📷 Ver foto</a>` : ''}
+       </div>`
+    ).join('');
+  } else {
+    card.style.display = 'none';
+  }
+}
+
+// ── Fechar Caixa ──────────────────────────────────────────────
+function abrirModalFechar() { document.getElementById('modal-fechar').classList.add('open'); }
+
+async function executarFechamento() {
+  document.getElementById('modal-fechar').classList.remove('open');
+  try {
+    const r   = await post({ action: 'fechar', funcionario: 'ADM' });
+    const msg = MSGS[Math.floor(Math.random() * MSGS.length)];
+    const total = (balanceDia && balanceDia.vendas)
+      ? Object.values(balanceDia.vendas).reduce((a, v) => a + v.qtd * v.preco, 0)
+      : 0;
+    document.getElementById('modal-ok-titulo').textContent =
+      'Caixa fechado! Total: ' + brl(total);
+    document.getElementById('modal-ok-msg').textContent = msg;
+    document.getElementById('modal-ok').classList.add('open');
+  } catch { toast('Erro ao fechar caixa'); }
+}
+
+// ── PDF ───────────────────────────────────────────────────────
+function gerarPDF() {
+  if (!balanceDia) { toast('Carregue o resumo primeiro'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const data = document.getElementById('r-data').value || '—';
+
+  doc.setFontSize(14);
+  doc.text('Gullas – Resumo do Dia', 14, 16);
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+  doc.text('Data: ' + data, 14, 23);
+
+  // Vendas
+  const vRows = Object.entries(balanceDia.vendas || {}).map(([k, v]) => [
+    k, v.qtd, brl(v.preco), brl(v.qtd * v.preco)
+  ]);
+  if (vRows.length) {
+    doc.setTextColor(0);
+    doc.setFontSize(11);
+    doc.text('Vendas', 14, 31);
+    doc.autoTable({
+      head: [['Produto', 'Qtd', 'Unit', 'Subtotal']],
+      body: vRows,
+      startY: 34,
+      theme: 'grid',
+      headStyles: { fillColor: [245, 158, 11] }
+    });
+  }
+
+  // Sobras
+  const sRows = Object.entries(balanceDia.sobras || {}).map(([k, v]) => [k, v]);
+  if (sRows.length) {
+    const y = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 40;
+    doc.setFontSize(11);
+    doc.text('Sobras', 14, y);
+    doc.autoTable({
+      head: [['Produto', 'Qtd']],
+      body: sRows,
+      startY: y + 3,
+      theme: 'grid',
+      headStyles: { fillColor: [100, 116, 139] }
+    });
+  }
+
+  doc.save('Gullas_' + data + '.pdf');
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+async function post(body) {
+  return fetch(SCRIPT_URL, {
+    method: 'POST', mode: 'no-cors',
+    body: JSON.stringify(body)
+  });
+}
+
+function brl(n) {
+  return 'R$ ' + (parseFloat(n) || 0).toFixed(2).replace('.', ',');
+}
+
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+</script>
 </body>
 </html>
