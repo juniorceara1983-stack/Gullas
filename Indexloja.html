@@ -1,182 +1,611 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gullas Loja - Oficial</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Gullas Loja</title>
+  <link rel="manifest" href="manifest-loja.json">
+  <meta name="theme-color" content="#f59e0b">
+  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');</script>
+  <style>
+    :root {
+      --primary: #f59e0b; --primary-d: #d97706;
+      --bg: #f8fafc; --card: #fff;
+      --text: #1e293b; --muted: #64748b; --border: #e2e8f0;
+      --success: #10b981; --danger: #ef4444; --r: 14px;
+    }
+    *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+           background: var(--bg); margin: 0; color: var(--text); min-height: 100vh; }
 
-    <link rel="manifest" href="manifest-loja.json">
-    <meta name="theme-color" content="#f59e0b">
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js');
-      }
-    </script>
+    /* ── Screens ── */
+    .screen { display: none; min-height: 100vh; flex-direction: column; }
+    .screen.active { display: flex; }
 
-    <style>
-        :root { --primary: #f59e0b; --bg: #f8fafc; }
-        body { font-family: sans-serif; background: var(--bg); text-align: center; padding: 15px; margin: 0; }
-        .container { max-width: 400px; margin: auto; background: white; border-radius: 20px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 6px solid var(--primary); }
-        .logo { width: 120px; margin-bottom: 15px; }
-        h3 { margin-top: 0; color: #333; font-weight: 800; }
-        input[type="text"], textarea { width: 100%; padding: 14px; border-radius: 10px; border: 2px solid #eee; box-sizing: border-box; font-size: 1rem; transition: 0.3s; }
-        input:focus { border-color: var(--primary); outline: none; }
-        
-        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f1f1; }
-        .item-name { font-weight: 500; color: #444; text-align: left; flex: 1; }
-        .q-sobra { width: 65px; text-align: center; border: 2px solid #eee; border-radius: 8px; padding: 8px; font-weight: bold; color: var(--primary); }
-        
-        .btn { background: var(--primary); color: white; border: none; width: 100%; padding: 16px; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 20px; font-size: 1rem; transition: 0.3s; }
-        .btn:active { transform: scale(0.98); }
-        .btn:disabled { background: #ccc; }
+    /* ── Login ── */
+    .login-wrap { flex: 1; display: flex; flex-direction: column; align-items: center;
+                  justify-content: center; padding: 32px 24px; }
+    .login-logo  { width: 110px; border-radius: 22px; margin-bottom: 20px;
+                   box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+    .login-title { font-size: 1.25rem; font-weight: 800; margin-bottom: 4px; }
+    .login-sub   { color: var(--muted); font-size: .9rem; margin-bottom: 28px; }
 
-        /* Estilo do Modal Bíblico */
-        #modalBiblico { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
-        .modal-content { background: white; width: 85%; max-width: 350px; padding: 30px; border-radius: 25px; text-align: center; position: relative; animation: pop 0.3s ease; }
-        @keyframes pop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .modal-logo { width: 80px; margin-bottom: 15px; }
-        .modal-text { font-style: italic; color: #444; line-height: 1.5; font-size: 1.1rem; margin-bottom: 20px; }
-        .btn-modal { background: #333; color: white; border: none; padding: 12px 25px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+    /* ── Forms ── */
+    .inp { width: 100%; padding: 14px; border: 2px solid var(--border); border-radius: var(--r);
+           font-size: 1rem; outline: none; background: white; transition: border-color .2s; }
+    .inp:focus { border-color: var(--primary); }
+    .inp::placeholder { color: #adb5bd; }
 
-        #sessaoLista { display: none; margin-top: 20px; animation: fadeIn 0.5s ease; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    </style>
+    /* ── Buttons ── */
+    .btn { width: 100%; padding: 15px; border: none; border-radius: var(--r); font-size: 1rem;
+           font-weight: 700; cursor: pointer; transition: all .18s; }
+    .btn:active { transform: scale(.97); opacity: .92; }
+    .btn:disabled { background: #cbd5e1 !important; cursor: not-allowed; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-ghost   { background: var(--border); color: var(--text); }
+
+    /* ── Header ── */
+    .hdr { background: var(--card); padding: 11px 16px; display: flex; align-items: center;
+           gap: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.07); position: sticky; top: 0; z-index: 100; }
+    .hdr-logo  { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
+    .hdr-title { font-weight: 700; font-size: 1rem; flex: 1; }
+    .hdr-name  { font-size: .8rem; color: var(--muted); }
+    .hdr-logout { background: none; border: none; color: var(--muted); font-size: 1.1rem;
+                  cursor: pointer; padding: 4px; }
+
+    /* ── Tabs ── */
+    .tab-bar { display: flex; background: var(--card); border-bottom: 2px solid var(--border); }
+    .tab-btn { flex: 1; padding: 13px 6px; border: none; background: transparent;
+               font-size: .9rem; font-weight: 600; color: var(--muted); cursor: pointer;
+               border-bottom: 3px solid transparent; transition: all .2s; }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab-pane { display: none; flex: 1; overflow-y: auto; }
+    .tab-pane.active { display: block; }
+
+    /* ── Product grid ── */
+    .sec { padding: 14px 16px; }
+    .sec-title { font-size: .72rem; font-weight: 700; color: var(--muted); text-transform: uppercase;
+                 letter-spacing: .06em; margin-bottom: 12px; }
+    .prod-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .prod-card { background: var(--card); border: 2px solid var(--border); border-radius: var(--r);
+                 padding: 16px 10px; text-align: center; cursor: pointer; transition: all .18s;
+                 position: relative; user-select: none; }
+    .prod-card.sel { border-color: var(--primary); background: #fffbeb; }
+    .prod-card.sel::after { content: '✓'; position: absolute; top: 6px; right: 9px;
+                            color: var(--primary); font-weight: 900; font-size: .82rem; }
+    .prod-card-name { font-size: .85rem; font-weight: 600; color: var(--text); }
+    .btn-add-prod { width: 100%; margin-top: 12px; padding: 12px; background: #f1f5f9;
+                    border: 2px dashed var(--border); border-radius: var(--r); color: var(--muted);
+                    font-size: .85rem; font-weight: 600; cursor: pointer; }
+
+    /* ── Basket bar ── */
+    .basket { position: fixed; bottom: 0; left: 0; right: 0; background: var(--primary);
+              padding: 13px 20px; display: none; align-items: center;
+              justify-content: space-between; z-index: 200;
+              box-shadow: 0 -2px 12px rgba(0,0,0,.15); }
+    .basket.show { display: flex; }
+    .basket-info { color: white; }
+    .basket-info b { display: block; font-size: 1rem; }
+    .basket-info small { font-size: .78rem; opacity: .88; }
+    .basket-cta { background: white; color: var(--primary); border: none; padding: 10px 22px;
+                  border-radius: 10px; font-weight: 800; font-size: .95rem; cursor: pointer; }
+
+    /* ── Confirmation ── */
+    .cfm-hdr { background: var(--card); padding: 14px 16px; display: flex; align-items: center;
+               gap: 10px; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .back-btn { background: none; border: none; font-size: 1.4rem; cursor: pointer; padding: 2px 8px 2px 0; }
+    .cfm-title { font-size: 1rem; font-weight: 800; }
+    .cfm-list { padding: 14px 16px; }
+    .cfm-item { background: var(--card); border: 2px solid var(--border); border-radius: var(--r);
+                padding: 13px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+    .cfm-item.removed { opacity: .35; }
+    .cfm-chk { width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer; flex-shrink: 0; }
+    .cfm-name { flex: 1; font-weight: 600; font-size: .88rem; }
+    .qty-ctrl { display: flex; align-items: center; gap: 6px; }
+    .qty-btn  { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--primary);
+                background: white; color: var(--primary); font-size: 1.1rem; font-weight: 900;
+                cursor: pointer; display: flex; align-items: center; justify-content: center;
+                line-height: 1; }
+    .qty-inp  { width: 40px; text-align: center; border: 2px solid var(--border); border-radius: 8px;
+                padding: 4px; font-size: .95rem; font-weight: 700; }
+
+    /* ── Image upload ── */
+    .upload-lbl { display: flex; align-items: center; gap: 8px; padding: 12px; background: #f1f5f9;
+                  border-radius: 10px; cursor: pointer; font-size: .88rem; color: var(--muted);
+                  font-weight: 600; margin-top: 10px; }
+    .img-prev { max-width: 100%; border-radius: 10px; margin-top: 8px; display: none; }
+    .img-prev.show { display: block; }
+
+    /* ── Leftovers ── */
+    .sob-item { background: var(--card); border-radius: var(--r); padding: 13px 16px;
+                margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+    .sob-name { font-weight: 600; font-size: .88rem; }
+    .sob-inp  { width: 72px; padding: 9px; border: 2px solid var(--border); border-radius: 10px;
+                text-align: center; font-size: 1rem; font-weight: 700; color: var(--primary); }
+
+    /* ── Modal ── */
+    .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6);
+                z-index: 500; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+    .modal-bg.open { display: flex; }
+    .modal { background: white; width: 88%; max-width: 360px; border-radius: 24px;
+             padding: 30px 24px; text-align: center; animation: pop .25s ease; }
+    @keyframes pop { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal-logo  { width: 68px; border-radius: 16px; margin-bottom: 14px; }
+    .modal-title { font-size: 1.05rem; font-weight: 800; margin-bottom: 8px; }
+    .modal-msg   { color: var(--muted); font-size: .92rem; line-height: 1.55; margin-bottom: 20px; }
+    .modal-biblical { font-style: italic; color: var(--text); }
+
+    /* ── Loading / Spinner ── */
+    .loading { text-align: center; padding: 30px; color: var(--muted); font-size: .9rem; }
+    .spin { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--primary);
+            border-radius: 50%; animation: sp .7s linear infinite; margin: 0 auto 10px; }
+    @keyframes sp { to { transform: rotate(360deg); } }
+
+    /* ── Toast ── */
+    .toast { position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%);
+             background: #1e293b; color: white; padding: 10px 20px; border-radius: 20px;
+             font-size: .83rem; font-weight: 600; z-index: 400; display: none; white-space: nowrap; }
+    .toast.show { display: block; }
+
+    .pb-basket { padding-bottom: 76px; }
+    .mt-10 { margin-top: 10px; }
+    .mt-14 { margin-top: 14px; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" class="logo">
-        
-        <div id="sessaoAcesso">
-            <h3>PAINEL DA LOJA</h3>
-            <p style="color: #666; font-size: 0.9rem;">Identifique-se para começar</p>
-            <input type="text" id="func" placeholder="Digite seu nome...">
-            <button class="btn" onclick="acessarLista()">ACESSAR LISTA DE SOBRAS</button>
-        </div>
 
-        <div id="sessaoLista">
-            <h3 style="font-size: 1rem; border-bottom: 2px solid #f1f1f1; padding-bottom: 10px;">CONFERÊNCIA DE ITENS</h3>
-            <div id="listaItens">
-                </div>
-            <textarea id="obs" placeholder="Alguma observação sobre as sobras? (Opcional)" style="margin-top: 15px; height: 80px; resize: none;"></textarea>
-            <button class="btn" id="btnEnviar" onclick="enviar()">FINALIZAR E ENVIAR</button>
+<!-- ══════════════════════════════════════
+     TELA 1 · LOGIN
+══════════════════════════════════════ -->
+<div id="tela-login" class="screen active">
+  <div class="login-wrap">
+    <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" class="login-logo" alt="Gullas">
+    <div class="login-title">PAINEL DA ATENDENTE</div>
+    <div class="login-sub">Identifique-se para começar</div>
+    <input id="inp-nome" type="text" class="inp" placeholder="Seu nome…" autocomplete="name"
+           style="max-width:320px; margin-bottom:12px;">
+    <button class="btn btn-primary" style="max-width:320px;" onclick="fazerLogin()">ACESSAR</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TELA 2 · PRINCIPAL
+══════════════════════════════════════ -->
+<div id="tela-principal" class="screen">
+  <div class="hdr">
+    <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" class="hdr-logo" alt="">
+    <span class="hdr-title">Gullas</span>
+    <span class="hdr-name" id="hdr-nome">—</span>
+    <button class="hdr-logout" onclick="fazerLogout()" title="Sair">🚪</button>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tbtn-vendas" onclick="mudarAba('vendas')">🛒 Vendas</button>
+    <button class="tab-btn" id="tbtn-sobras" onclick="mudarAba('sobras')">📦 Sobras</button>
+  </div>
+
+  <!-- ABA VENDAS -->
+  <div id="tpane-vendas" class="tab-pane active pb-basket">
+    <div class="sec">
+      <div class="sec-title">Selecione os itens vendidos</div>
+      <div id="prod-grid" class="prod-grid">
+        <div class="loading" style="grid-column:span 2">
+          <div class="spin"></div>Carregando catálogo…
         </div>
+      </div>
+      <button class="btn-add-prod" onclick="abrirModalNovoProd()">+ Adicionar novo produto</button>
     </div>
+  </div>
 
-    <div id="modalBiblico">
-        <div class="modal-content">
-            <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" class="modal-logo">
-            <div id="textoBiblico" class="modal-text"></div>
-            <button class="btn-modal" onclick="fecharModal()">AMÉM</button>
-        </div>
+  <!-- ABA SOBRAS -->
+  <div id="tpane-sobras" class="tab-pane">
+    <div class="sec">
+      <div class="sec-title">Quantidades que sobraram hoje</div>
+      <div id="sob-list">
+        <div class="loading"><div class="spin"></div>Carregando…</div>
+      </div>
+      <div class="mt-14"></div>
+      <textarea id="sob-obs" class="inp" rows="3"
+                placeholder="Observações sobre as sobras… (opcional)" style="resize:none;"></textarea>
+      <label class="upload-lbl">
+        📷 Foto de produto danificado / vencido
+        <input type="file" id="sob-img" accept="image/*" capture="environment" style="display:none;"
+               onchange="prevImg(this,'sob-img-prev')">
+      </label>
+      <img id="sob-img-prev" class="img-prev" alt="">
+      <button class="btn btn-primary mt-14" id="btn-sob" onclick="enviarSobras()">ENVIAR SOBRAS DO DIA</button>
     </div>
+  </div>
+</div>
 
-    <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwymkSXlXjQj27nWokMK9nNSystwUnDXCUqV_b2QcfDRCswl_DhTDJ06ozslFf_FA1h/exec";
-        
-        // Itens que sempre devem aparecer
-        const fixos = ["Massa Quente", "Massa Fria", "Massa Forno", "Bolos (inteiros)", "Suco Galao", "Empadas", "Tortas", "Pastel"];
+<!-- Barra flutuante de carrinho -->
+<div class="basket" id="basket">
+  <div class="basket-info">
+    <b id="basket-cnt">0 itens</b>
+    <small>selecionados</small>
+  </div>
+  <button class="basket-cta" onclick="abrirConfirmacao()">CONFIRMAR →</button>
+</div>
 
-        const mensagens = [
-            "O Senhor é o meu pastor, nada me faltará. (Salmo 23:1)",
-            "Tudo posso naquele que me fortalece. (Filipenses 4:13)",
-            "O que é impossível para os homens é possível para Deus. (Lucas 18:27)",
-            "Deem graças ao Senhor, porque ele é bom. (Salmo 136:1)",
-            "Seja forte e corajoso! (Josué 1:9)",
-            "Consagre ao Senhor tudo o que você faz. (Provérbios 16:3)",
-            "A alegria do Senhor é a vossa força. (Neemias 8:10)",
-            "O choro pode durar uma noite, mas a alegria vem pela manhã. (Salmo 30:5)"
-        ];
+<!-- ══════════════════════════════════════
+     TELA 3 · CONFIRMAÇÃO DE VENDA
+══════════════════════════════════════ -->
+<div id="tela-cfm" class="screen">
+  <div class="cfm-hdr">
+    <button class="back-btn" onclick="voltarVendas()">←</button>
+    <span class="cfm-title">CONFIRMAR PEDIDO</span>
+  </div>
 
-        function acessarLista() {
-            const nome = document.getElementById('func').value;
-            if(!nome) {
-                alert("Por favor, digite seu nome para continuar.");
-                return;
-            }
-            document.getElementById('sessaoAcesso').style.display = 'none';
-            document.getElementById('sessaoLista').style.display = 'block';
-            carregarItens();
-        }
+  <div id="cfm-list" class="cfm-list"></div>
 
-        async function carregarItens() {
-            const cont = document.getElementById('listaItens');
-            cont.innerHTML = "<p style='color:#999;'>Carregando lista de hoje...</p>";
-            
-            try {
-                const res = await fetch(SCRIPT_URL);
-                const rows = await res.json();
-                
-                // Pega itens que foram enviados pelo ADM hoje
-                const enviadosHoje = rows.filter(r => r[1] === "ENVIO").map(r => r[2]);
-                
-                // Junta fixos com os enviados (sem repetir)
-                const listaTotal = [...new Set([...fixos, ...enviadosHoje])];
-                
-                cont.innerHTML = "";
-                listaTotal.forEach(item => {
-                    cont.innerHTML += `
-                        <div class="item-row">
-                            <span class="item-name">${item}</span>
-                            <input type="number" class="q-sobra" data-p="${item}" placeholder="0">
-                        </div>`;
-                });
-            } catch(e) {
-                cont.innerHTML = "<p style='color:red;'>Erro ao carregar itens. Verifique a conexão.</p>";
-            }
-        }
+  <div class="sec" style="padding-top:0;">
+    <div class="sec-title">Observação (opcional)</div>
+    <textarea id="v-obs" class="inp" rows="3"
+              placeholder="Alguma observação sobre a venda…" style="resize:none;"></textarea>
+    <label class="upload-lbl">
+      📷 Foto de produto danificado / vencido
+      <input type="file" id="v-img" accept="image/*" capture="environment" style="display:none;"
+             onchange="prevImg(this,'v-img-prev')">
+    </label>
+    <img id="v-img-prev" class="img-prev" alt="">
+    <button class="btn btn-success mt-14" id="btn-venda" onclick="enviarVenda()">✅ ENVIAR VENDA</button>
+  </div>
+</div>
 
-        async function enviar() {
-            const btn = document.getElementById('btnEnviar');
-            const funcionario = document.getElementById('func').value;
-            const obs = document.getElementById('obs').value;
-            
-            const inputs = document.querySelectorAll('.q-sobra');
-            const itensSobra = [];
-            
-            inputs.forEach(input => {
-                if(input.value !== "") {
-                    itensSobra.push({
-                        produto: input.dataset.p,
-                        qtd: input.value
-                    });
-                }
-            });
+<!-- ══════════════════════════════════════
+     MODALS
+══════════════════════════════════════ -->
 
-            if(itensSobra.length === 0) {
-                alert("Por favor, preencha as sobras de pelo menos um item.");
-                return;
-            }
+<!-- Sucesso / Bíblico -->
+<div id="modal-ok" class="modal-bg">
+  <div class="modal">
+    <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" class="modal-logo" alt="">
+    <div class="modal-title" id="modal-ok-titulo">Enviado!</div>
+    <div class="modal-msg modal-biblical" id="modal-ok-msg"></div>
+    <button class="btn btn-primary" onclick="fecharModalOk()">AMÉM 🙏</button>
+  </div>
+</div>
 
-            btn.innerText = "ENVIANDO AGUARDE...";
-            btn.disabled = true;
+<!-- Novo produto -->
+<div id="modal-novo" class="modal-bg">
+  <div class="modal">
+    <div class="modal-title">Novo Produto</div>
+    <div class="modal-msg">Adicione um produto que não está na lista</div>
+    <input id="novo-nome" type="text" class="inp" placeholder="Nome do produto…" maxlength="50"
+           style="margin-bottom:12px;">
+    <button class="btn btn-primary" onclick="adicionarProduto()">ADICIONAR</button>
+    <button class="btn btn-ghost mt-10" onclick="fecharModalNovo()">CANCELAR</button>
+  </div>
+</div>
 
-            try {
-                await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({
-                        action: "sobra",
-                        funcionario: funcionario,
-                        itens: itensSobra,
-                        observacao: obs
-                    })
-                });
+<div id="toast" class="toast"></div>
 
-                // Sucesso: Mostrar Modal Bíblico
-                const msgAleatoria = mensagens[Math.floor(Math.random() * mensagens.length)];
-                document.getElementById('textoBiblico').innerText = msgAleatoria;
-                document.getElementById('modalBiblico').style.display = 'flex';
-                
-            } catch(e) {
-                alert("Ocorreu um erro ao enviar. Tente novamente.");
-                btn.innerText = "FINALIZAR E ENVIAR";
-                btn.disabled = false;
-            }
-        }
+<script>
+// ──────────────────────────────────────────────────────────────
+//  CONFIGURAÇÃO  –  cole a URL do seu Apps Script aqui
+// ──────────────────────────────────────────────────────────────
+const SCRIPT_URL = "COLE_AQUI_A_URL_DO_SEU_APPS_SCRIPT";
 
-        function fecharModal() {
-            location.reload(); // Reinicia para próxima conferência
-        }
-    </script>
+const MSGS = [
+  "O Senhor é o meu pastor, nada me faltará. (Salmo 23:1)",
+  "Tudo posso naquele que me fortalece. (Filipenses 4:13)",
+  "O que é impossível para os homens é possível para Deus. (Lucas 18:27)",
+  "Deem graças ao Senhor, porque ele é bom. (Salmo 136:1)",
+  "Seja forte e corajoso! (Josué 1:9)",
+  "Consagre ao Senhor tudo o que você faz. (Provérbios 16:3)",
+  "A alegria do Senhor é a vossa força. (Neemias 8:10)",
+  "O choro pode durar uma noite, mas a alegria vem pela manhã. (Salmo 30:5)"
+];
+
+// ── Estado ──────────────────────────────────────────────────
+let nomeFuncionario = "";
+let catalogo = [];       // [{id, nome, preco}]
+let selecionados = new Set();
+
+// ── Init ─────────────────────────────────────────────────────
+(function init() {
+  const nome = localStorage.getItem('gullas_nome');
+  if (nome) {
+    nomeFuncionario = nome;
+    document.getElementById('hdr-nome').textContent = nome;
+    mostrarTela('tela-principal');
+    carregarCatalogo();
+  }
+  document.getElementById('inp-nome').addEventListener('keydown', e => {
+    if (e.key === 'Enter') fazerLogin();
+  });
+})();
+
+// ── Login / Logout ───────────────────────────────────────────
+function fazerLogin() {
+  const nome = document.getElementById('inp-nome').value.trim();
+  if (!nome) { toast('Digite seu nome para continuar'); return; }
+  nomeFuncionario = nome;
+  localStorage.setItem('gullas_nome', nome);
+  document.getElementById('hdr-nome').textContent = nome;
+  mostrarTela('tela-principal');
+  carregarCatalogo();
+}
+
+function fazerLogout() {
+  localStorage.removeItem('gullas_nome');
+  nomeFuncionario = "";
+  selecionados.clear();
+  mostrarTela('tela-login');
+  document.getElementById('inp-nome').value = '';
+}
+
+// ── Telas ────────────────────────────────────────────────────
+function mostrarTela(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── Abas ─────────────────────────────────────────────────────
+function mudarAba(aba) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('tbtn-' + aba).classList.add('active');
+  document.getElementById('tpane-' + aba).classList.add('active');
+  if (aba === 'sobras') renderSobras();
+}
+
+// ── Catálogo ─────────────────────────────────────────────────
+async function carregarCatalogo() {
+  try {
+    const r = await fetch(SCRIPT_URL + '?action=catalog');
+    const data = await r.json();
+    if (!Array.isArray(data)) throw new Error();
+    catalogo = data;
+    localStorage.setItem('gullas_cat', JSON.stringify(catalogo));
+  } catch {
+    const cached = localStorage.getItem('gullas_cat');
+    catalogo = cached ? JSON.parse(cached) : [];
+    if (catalogo.length) toast('Modo offline – usando catálogo em cache');
+    else toast('Erro ao carregar catálogo. Sem conexão.');
+  }
+  renderGrid();
+  renderSobras();
+}
+
+function renderGrid() {
+  const g = document.getElementById('prod-grid');
+  if (!catalogo.length) {
+    g.innerHTML = '<p style="grid-column:span 2;text-align:center;color:#94a3b8;padding:20px;">Catálogo vazio</p>';
+    return;
+  }
+  g.innerHTML = catalogo.map(it =>
+    `<div class="prod-card${selecionados.has(it.id) ? ' sel' : ''}"
+          id="card-${it.id}" onclick="toggleItem(${it.id})">
+       <div class="prod-card-name">${esc(it.nome)}</div>
+     </div>`
+  ).join('');
+}
+
+function toggleItem(id) {
+  selecionados.has(id) ? selecionados.delete(id) : selecionados.add(id);
+  const card = document.getElementById('card-' + id);
+  if (card) card.classList.toggle('sel', selecionados.has(id));
+  atualizarBasket();
+}
+
+function atualizarBasket() {
+  const n = selecionados.size;
+  document.getElementById('basket-cnt').textContent = n + (n === 1 ? ' item' : ' itens');
+  document.getElementById('basket').classList.toggle('show', n > 0);
+}
+
+// ── Confirmação ───────────────────────────────────────────────
+function abrirConfirmacao() {
+  if (!selecionados.size) return;
+  const list = document.getElementById('cfm-list');
+  list.innerHTML = catalogo
+    .filter(it => selecionados.has(it.id))
+    .map(it =>
+      `<div class="cfm-item" id="ci-${it.id}">
+         <input type="checkbox" class="cfm-chk" checked
+                onchange="toggleCfm(${it.id}, this.checked)">
+         <span class="cfm-name">${esc(it.nome)}</span>
+         <div class="qty-ctrl">
+           <button class="qty-btn" onclick="dQty(${it.id},-1)">−</button>
+           <input type="number" class="qty-inp" id="qi-${it.id}" value="1" min="1" max="999">
+           <button class="qty-btn" onclick="dQty(${it.id},1)">+</button>
+         </div>
+       </div>`
+    ).join('');
+  mostrarTela('tela-cfm');
+}
+
+function voltarVendas() {
+  mostrarTela('tela-principal');
+  mudarAba('vendas');
+}
+
+function toggleCfm(id, on) {
+  document.getElementById('ci-' + id).classList.toggle('removed', !on);
+}
+
+function dQty(id, d) {
+  const el = document.getElementById('qi-' + id);
+  if (el) el.value = Math.max(1, (parseInt(el.value) || 1) + d);
+}
+
+// ── Enviar Venda ──────────────────────────────────────────────
+async function enviarVenda() {
+  const btn = document.getElementById('btn-venda');
+  const itens = catalogo
+    .filter(it => selecionados.has(it.id))
+    .filter(it => {
+      const ci = document.getElementById('ci-' + it.id);
+      return ci && !ci.classList.contains('removed');
+    })
+    .map(it => ({ produto: it.nome, qtd: parseInt(document.getElementById('qi-' + it.id)?.value) || 1 }));
+
+  if (!itens.length) { toast('Nenhum item marcado'); return; }
+
+  const obs      = document.getElementById('v-obs').value;
+  const imgB64   = await imgBase64('v-img');
+
+  btn.textContent = 'ENVIANDO…'; btn.disabled = true;
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST', mode: 'no-cors',
+      body: JSON.stringify({ action: 'sale', itens, funcionario: nomeFuncionario, obs, imagemBase64: imgB64 })
+    });
+    selecionados.clear();
+    resetField('v-obs'); resetFile('v-img', 'v-img-prev');
+    document.getElementById('basket').classList.remove('show');
+    showModalOk('Venda registrada! 🎉');
+  } catch {
+    toast('Erro ao enviar. Verifique a conexão.');
+    btn.textContent = '✅ ENVIAR VENDA'; btn.disabled = false;
+  }
+}
+
+// ── Sobras ────────────────────────────────────────────────────
+function renderSobras() {
+  const list = document.getElementById('sob-list');
+  if (!catalogo.length) {
+    list.innerHTML = '<p style="color:#94a3b8;text-align:center;padding:20px;">Carregue o catálogo primeiro</p>';
+    return;
+  }
+  list.innerHTML = catalogo.map(it =>
+    `<div class="sob-item">
+       <span class="sob-name">${esc(it.nome)}</span>
+       <input type="number" class="sob-inp" id="si-${it.id}" placeholder="0" min="0">
+     </div>`
+  ).join('');
+}
+
+async function enviarSobras() {
+  const btn = document.getElementById('btn-sob');
+  const itens = catalogo
+    .map(it => ({ produto: it.nome, qtd: parseInt(document.getElementById('si-' + it.id)?.value) || 0 }))
+    .filter(i => i.qtd > 0);
+
+  if (!itens.length) { toast('Preencha pelo menos uma quantidade'); return; }
+
+  const obs    = document.getElementById('sob-obs').value;
+  const imgB64 = await imgBase64('sob-img');
+
+  btn.textContent = 'ENVIANDO…'; btn.disabled = true;
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST', mode: 'no-cors',
+      body: JSON.stringify({ action: 'sobra', itens, funcionario: nomeFuncionario, obs, imagemBase64: imgB64 })
+    });
+    resetField('sob-obs'); resetFile('sob-img', 'sob-img-prev');
+    catalogo.forEach(it => {
+      const el = document.getElementById('si-' + it.id);
+      if (el) el.value = '';
+    });
+    showModalOk('Sobras registradas! 📦');
+  } catch {
+    toast('Erro ao enviar. Verifique a conexão.');
+    btn.textContent = 'ENVIAR SOBRAS DO DIA'; btn.disabled = false;
+  }
+}
+
+// ── Novo produto ──────────────────────────────────────────────
+function abrirModalNovoProd() {
+  document.getElementById('novo-nome').value = '';
+  document.getElementById('modal-novo').classList.add('open');
+}
+function fecharModalNovo() { document.getElementById('modal-novo').classList.remove('open'); }
+
+async function adicionarProduto() {
+  const nome = document.getElementById('novo-nome').value.trim();
+  if (!nome) { toast('Digite o nome do produto'); return; }
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST', mode: 'no-cors',
+      body: JSON.stringify({ action: 'addItem', nome, preco: 0 })
+    });
+    const tempId = Date.now();
+    catalogo.push({ id: tempId, nome, preco: 0 });
+    localStorage.setItem('gullas_cat', JSON.stringify(catalogo));
+    renderGrid(); renderSobras();
+    fecharModalNovo();
+    toast(nome + ' adicionado!');
+  } catch { toast('Erro ao adicionar produto'); }
+}
+
+// ── Modals ────────────────────────────────────────────────────
+function showModalOk(titulo) {
+  document.getElementById('modal-ok-titulo').textContent = titulo;
+  document.getElementById('modal-ok-msg').textContent = MSGS[Math.floor(Math.random() * MSGS.length)];
+  document.getElementById('modal-ok').classList.add('open');
+}
+
+function fecharModalOk() {
+  document.getElementById('modal-ok').classList.remove('open');
+  const bv = document.getElementById('btn-venda');
+  if (bv) { bv.textContent = '✅ ENVIAR VENDA'; bv.disabled = false; }
+  const bs = document.getElementById('btn-sob');
+  if (bs) { bs.textContent = 'ENVIAR SOBRAS DO DIA'; bs.disabled = false; }
+  mostrarTela('tela-principal');
+  mudarAba('vendas');
+  renderGrid();
+}
+
+// ── Imagem ────────────────────────────────────────────────────
+function prevImg(input, prevId) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const el = document.getElementById(prevId);
+    el.src = e.target.result;
+    el.classList.add('show');
+  };
+  reader.readAsDataURL(file);
+}
+
+function imgBase64(inputId) {
+  const input = document.getElementById(inputId);
+  if (!input || !input.files[0]) return Promise.resolve(null);
+  return new Promise(resolve => {
+    const canvas = document.createElement('canvas');
+    const img    = new Image();
+    img.onload = () => {
+      const MAX = 800;
+      let [w, h] = [img.width, img.height];
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = h * MAX / w; w = MAX; }
+        else { w = w * MAX / h; h = MAX; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', 0.72).split(',')[1]);
+    };
+    img.onerror = () => resolve(null);
+    const fr = new FileReader();
+    fr.onload = e => { img.src = e.target.result; };
+    fr.readAsDataURL(input.files[0]);
+  });
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function resetField(id) { const el = document.getElementById(id); if (el) el.value = ''; }
+function resetFile(inputId, prevId) {
+  const inp = document.getElementById(inputId); if (inp) inp.value = '';
+  const prv = document.getElementById(prevId);  if (prv) prv.classList.remove('show');
+}
+
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+</script>
 </body>
 </html>
