@@ -37,14 +37,14 @@ pela URL copiada no passo anterior.
 
 ## 🔐 Senha do Administrador
 
-A senha padrão do painel ADM é **`Gullas@2024`**.
+A senha padrão do painel ADM é **`gullas@2026`**.
 
 > ⚠️ **Importante:** troque esta senha imediatamente após a primeira instalação para evitar acesso não autorizado.
 
 Para alterar, edite a linha em `Indexadm.html`:
 
 ```js
-const SENHA_PADRAO = "Gullas@2024";
+const SENHA_PADRAO = "gullas@2026";
 ```
 
 A senha digitada na primeira sessão é armazenada localmente no dispositivo do administrador.
