@@ -184,6 +184,7 @@
     <button class="tab-btn active" id="tbtn-catalogo" onclick="mudarAba('catalogo')">📋 Catálogo</button>
     <button class="tab-btn" id="tbtn-vendas"   onclick="mudarAba('vendas')">💰 Vendas</button>
     <button class="tab-btn" id="tbtn-sobras"   onclick="mudarAba('sobras')">📦 Sobras</button>
+    <button class="tab-btn" id="tbtn-estufa"   onclick="mudarAba('estufa')">🧺 Estufa</button>
     <button class="tab-btn" id="tbtn-resumo"   onclick="mudarAba('resumo')">📊 Resumo</button>
   </div>
 
@@ -226,6 +227,17 @@
         <button class="btn btn-primary" onclick="carregarSobras()">🔍</button>
       </div>
       <div id="s-table"><div class="empty">Selecione uma data e clique em 🔍</div></div>
+    </div>
+  </div>
+
+  <!-- ── ABA ESTUFA ── -->
+  <div id="tpane-estufa" class="tab-pane">
+    <div class="card">
+      <div class="card-title">Controle de Estufa</div>
+      <div class="modal-msg" style="margin-bottom:12px;">
+        Visualize enviado x vendido x disponível e monte sugestão de nova remessa.
+      </div>
+      <button class="btn btn-primary btn-full" onclick="abrirModalEstufa()">👁️ VISUALIZAR ESTUFA</button>
     </div>
   </div>
 
@@ -309,6 +321,23 @@
   </div>
 </div>
 
+<!-- Estufa -->
+<div id="modal-estufa" class="modal-bg">
+  <div class="modal" style="max-width:740px;width:94%;text-align:left;">
+    <div class="modal-title">Painel da Estufa</div>
+    <div class="drow" style="margin-bottom:10px;">
+      <input id="e-data" type="date" class="inp">
+      <button class="btn btn-primary" onclick="carregarEstufa()">🔍</button>
+    </div>
+    <div id="e-table"><div class="empty">Selecione uma data e clique em 🔍</div></div>
+    <div class="g2 mt-14">
+      <button class="btn btn-success" onclick="salvarEnviosEstufa()">💾 SALVAR ENVIADO</button>
+      <button class="btn btn-primary" onclick="enviarSugestaoZap()">📲 ENVIAR SUGESTÃO (ZAP)</button>
+    </div>
+    <button class="btn btn-secondary btn-full mt-10" onclick="fecharModalEstufa()">FECHAR</button>
+  </div>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <script>
@@ -330,6 +359,7 @@ const MSGS = [
 // ── Estado ──────────────────────────────────────────────────
 let catalogo   = [];
 let balanceDia = null;
+let estufaRows = [];
 
 // ── Init ─────────────────────────────────────────────────────
 (function init() {
@@ -343,7 +373,7 @@ let balanceDia = null;
 
 function ativarDashboard() {
   const hoje = new Date().toISOString().slice(0, 10);
-  ['v-data', 's-data', 'r-data'].forEach(id => {
+  ['v-data', 's-data', 'r-data', 'e-data'].forEach(id => {
     document.getElementById(id).value = hoje;
   });
   mostrarTela('tela-principal');
@@ -382,6 +412,7 @@ function mudarAba(aba) {
   document.getElementById('tpane-' + aba).classList.add('active');
   if (aba === 'vendas') carregarVendas();
   else if (aba === 'sobras') carregarSobras();
+  else if (aba === 'estufa') abrirModalEstufa();
   else if (aba === 'resumo') carregarResumo();
 }
 
@@ -541,6 +572,132 @@ function renderSobras(sobras) {
       <thead><tr><th>Produto</th><th class="tr">Qtd</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
+}
+
+// ── Estufa ────────────────────────────────────────────────────
+function abrirModalEstufa() {
+  document.getElementById('modal-estufa').classList.add('open');
+  if (!estufaRows.length) carregarEstufa();
+}
+
+function fecharModalEstufa() {
+  document.getElementById('modal-estufa').classList.remove('open');
+}
+
+async function carregarEstufa() {
+  const data = document.getElementById('e-data').value;
+  if (!data) { toast('Selecione uma data'); return; }
+  const div = document.getElementById('e-table');
+  div.innerHTML = '<div class="loading"><div class="spin"></div>Carregando…</div>';
+  try {
+    const [rc, rb, re] = await Promise.all([
+      fetch(SCRIPT_URL + '?action=catalog'),
+      fetch(SCRIPT_URL + '?action=balance&date=' + data),
+      fetch(SCRIPT_URL + '?action=dispatch&date=' + data)
+    ]);
+    const cat = await rc.json();
+    const bal = await rb.json();
+    const env = await re.json();
+
+    const produtos = new Set();
+    (Array.isArray(cat) ? cat : []).forEach(it => produtos.add(String(it.nome)));
+    Object.keys((bal && bal.vendas) || {}).forEach(k => produtos.add(k));
+    Object.keys((env && env.envios) || {}).forEach(k => produtos.add(k));
+
+    const vendas = (bal && bal.vendas) || {};
+    const envios = (env && env.envios) || {};
+
+    estufaRows = Array.from(produtos)
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      .map(prod => {
+        const enviado = parseInt(envios[prod]) || 0;
+        const vendido = parseInt((vendas[prod] && vendas[prod].qtd) || 0);
+        const disponivel = Math.max(enviado - vendido, 0);
+        const sugestaoEnvio = Math.max(vendido - enviado, 0);
+        return { produto: prod, enviado, vendido, disponivel, sugestaoEnvio };
+      });
+
+    renderEstufa();
+  } catch {
+    div.innerHTML = '<div class="empty">Erro ao carregar estufa</div>';
+  }
+}
+
+function renderEstufa() {
+  const div = document.getElementById('e-table');
+  if (!estufaRows.length) {
+    div.innerHTML = '<div class="empty">Nenhum produto para a data selecionada</div>';
+    return;
+  }
+  const rows = estufaRows.map((r, i) => `
+    <tr>
+      <td>${esc(r.produto)}</td>
+      <td class="tr"><input id="env-${i}" class="inp" type="number" min="0" value="${r.enviado}" aria-label="Quantidade enviada de ${esc(r.produto)}" oninput="recalcularLinhaEstufa(${i})"></td>
+      <td class="tr tb">${r.vendido}</td>
+      <td class="tr tb" id="disp-${i}">${r.disponivel}</td>
+      <td class="tr"><input id="sug-${i}" class="inp" type="number" min="0" value="${r.sugestaoEnvio}" aria-label="Sugestão de envio de ${esc(r.produto)}"></td>
+    </tr>
+  `).join('');
+
+  div.innerHTML = `
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Produto</th>
+          <th class="tr">Enviado</th>
+          <th class="tr">Vendido</th>
+          <th class="tr">Disponível</th>
+          <th class="tr">Sugerir envio (falta)</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function recalcularLinhaEstufa(i) {
+  const enviado = parseInt(document.getElementById('env-' + i)?.value) || 0;
+  estufaRows[i].enviado = Math.max(enviado, 0);
+  estufaRows[i].disponivel = Math.max(estufaRows[i].enviado - estufaRows[i].vendido, 0);
+  const disp = document.getElementById('disp-' + i);
+  if (disp) disp.textContent = estufaRows[i].disponivel;
+}
+
+async function salvarEnviosEstufa() {
+  const data = document.getElementById('e-data').value;
+  if (!data) { toast('Selecione uma data'); return; }
+  if (!estufaRows.length) { toast('Nenhum item para salvar'); return; }
+  const itens = estufaRows.map((r, i) => ({
+    produto: r.produto,
+    qtd: Math.max(parseInt(document.getElementById('env-' + i)?.value) || 0, 0)
+  }));
+  try {
+    await post({ action: 'setDispatch', data, itens, funcionario: 'ADM' });
+    estufaRows = estufaRows.map((r, i) => {
+      const enviado = Math.max(parseInt(document.getElementById('env-' + i)?.value) || 0, 0);
+      return { ...r, enviado, disponivel: Math.max(enviado - r.vendido, 0) };
+    });
+    renderEstufa();
+    toast('Quantidades enviadas salvas!');
+  } catch {
+    toast('Erro ao salvar enviado');
+  }
+}
+
+function enviarSugestaoZap() {
+  if (!estufaRows.length) { toast('Carregue a estufa primeiro'); return; }
+  const itens = estufaRows
+    .map((r, i) => ({
+      produto: r.produto,
+      qtd: Math.max(parseInt(document.getElementById('sug-' + i)?.value) || 0, 0)
+    }))
+    .filter(i => i.qtd > 0);
+
+  if (!itens.length) { toast('Informe ao menos 1 sugestão'); return; }
+
+  const data = document.getElementById('e-data').value || '—';
+  const linhas = itens.map(i => `• ${i.produto}: ${i.qtd}`).join('\n');
+  const msg = `Gullas - Sugestão de nova remessa (${data})\n\n${linhas}`;
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 }
 
 // ── Resumo ────────────────────────────────────────────────────

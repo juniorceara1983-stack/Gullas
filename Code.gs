@@ -80,6 +80,7 @@ function doGet(e) {
     switch (action) {
       case 'catalog': result = actionGetCatalog();                               break;
       case 'balance': result = actionGetBalance(e.parameter.date);               break;
+      case 'dispatch': result = actionGetDispatch(e.parameter.date);             break;
       case 'history': result = actionGetHistory(e.parameter.from, e.parameter.to); break;
       default:        result = { error: 'acao_desconhecida' };
     }
@@ -96,6 +97,7 @@ function doPost(e) {
     switch (d.action) {
       case 'sale':        result = actionSale(d);        break;
       case 'sobra':       result = actionSobra(d);       break;
+      case 'setDispatch': result = actionSetDispatch(d); break;
       case 'addItem':     result = actionAddItem(d);     break;
       case 'updateItem':  result = actionUpdateItem(d);  break;
       case 'removeItem':  result = actionRemoveItem(d);  break;
@@ -272,6 +274,72 @@ function actionGetHistory(from, to) {
   });
 
   return dias;
+}
+
+// ── Envios / Estufa ────────────────────────────────────────────
+
+const ENV_HEADERS = ['timestamp', 'data', 'produto', 'qtd', 'funcionario'];
+const HEADER_ROW_OFFSET = 2;
+
+function actionGetDispatch(date) {
+  const data = date || hoje();
+  const rows = sheetRows(getSheet('Envios', ENV_HEADERS));
+  const envios = {};
+
+  rows.forEach(r => {
+    if (String(r[1]) !== data) return;
+    const prod = String(r[2]);
+    const qtd  = parseInt(r[3]) || 0;
+    if (!envios[prod]) envios[prod] = 0;
+    envios[prod] += qtd;
+  });
+
+  return { data, envios };
+}
+
+function actionSetDispatch(d) {
+  const data = d.data || hoje();
+  const targetDate = String(data);
+  const itens = Array.isArray(d.itens) ? d.itens : [];
+  const sh = getSheet('Envios', ENV_HEADERS);
+  const rows = sheetRows(sh);
+
+  const rowNumbersToDelete = [];
+  for (let i = 0; i < rows.length; i++) {
+    if (String(rows[i][1]) === targetDate) rowNumbersToDelete.push(i + HEADER_ROW_OFFSET);
+  }
+  if (rowNumbersToDelete.length) {
+    const deleteRanges = [];
+    let start = rowNumbersToDelete[0], end = rowNumbersToDelete[0];
+    for (let i = 1; i < rowNumbersToDelete.length; i++) {
+      if (rowNumbersToDelete[i] === end + 1) {
+        end = rowNumbersToDelete[i];
+      } else {
+        deleteRanges.push([start, end - start + 1]);
+        start = rowNumbersToDelete[i];
+        end = rowNumbersToDelete[i];
+      }
+    }
+    deleteRanges.push([start, end - start + 1]);
+    for (let i = deleteRanges.length - 1; i >= 0; i--) {
+      sh.deleteRows(deleteRanges[i][0], deleteRanges[i][1]);
+    }
+  }
+
+  const ts = new Date().toISOString();
+  const funcionario = d.funcionario || 'ADM';
+  const novos = [];
+  itens.forEach(item => {
+    const qtd = parseInt(item.qtd) || 0;
+    if (qtd <= 0) return;
+    novos.push([ts, data, String(item.produto || ''), qtd, funcionario]);
+  });
+  if (novos.length) {
+    const startRow = sh.getLastRow() + 1;
+    sh.getRange(startRow, 1, novos.length, ENV_HEADERS.length).setValues(novos);
+  }
+
+  return { ok: true, data };
 }
 
 // ── Fechar Caixa ───────────────────────────────────────────────
