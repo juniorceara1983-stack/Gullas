@@ -68,6 +68,7 @@ A senha digitada na primeira sessão é armazenada localmente no dispositivo do 
 | **Catálogo** | Cadastrar, editar e remover produtos com preço unitário |
 | **Vendas** | Visualizar vendas por data com quantidade, preço unitário, subtotal e **total faturado** |
 | **Sobras** | Visualizar sobras registradas pelas atendentes por data |
+| **Estufa** | Controlar quantidades enviadas, vendido/disponível e gerar sugestão de nova remessa via WhatsApp |
 | **Resumo** | KPIs do dia (faturamento, itens vendidos, sobras, observações) + exportação em **PDF** |
 | **Fechar Caixa** | Registra encerramento do dia e salva total na planilha |
 

@@ -80,6 +80,7 @@ function doGet(e) {
     switch (action) {
       case 'catalog': result = actionGetCatalog();                               break;
       case 'balance': result = actionGetBalance(e.parameter.date);               break;
+      case 'dispatch': result = actionGetDispatch(e.parameter.date);             break;
       case 'history': result = actionGetHistory(e.parameter.from, e.parameter.to); break;
       default:        result = { error: 'acao_desconhecida' };
     }
@@ -96,6 +97,7 @@ function doPost(e) {
     switch (d.action) {
       case 'sale':        result = actionSale(d);        break;
       case 'sobra':       result = actionSobra(d);       break;
+      case 'setDispatch': result = actionSetDispatch(d); break;
       case 'addItem':     result = actionAddItem(d);     break;
       case 'updateItem':  result = actionUpdateItem(d);  break;
       case 'removeItem':  result = actionRemoveItem(d);  break;
@@ -272,6 +274,49 @@ function actionGetHistory(from, to) {
   });
 
   return dias;
+}
+
+// ── Envios / Estufa ────────────────────────────────────────────
+
+const ENV_HEADERS = ['timestamp', 'data', 'produto', 'qtd', 'funcionario'];
+
+function actionGetDispatch(date) {
+  const data = date || hoje();
+  const rows = sheetRows(getSheet('Envios', ENV_HEADERS));
+  const envios = {};
+
+  rows.forEach(r => {
+    if (String(r[1]) !== data) return;
+    const prod = String(r[2]);
+    const qtd  = parseInt(r[3]) || 0;
+    if (!envios[prod]) envios[prod] = 0;
+    envios[prod] += qtd;
+  });
+
+  return { data, envios };
+}
+
+function actionSetDispatch(d) {
+  const data = d.data || hoje();
+  const itens = Array.isArray(d.itens) ? d.itens : [];
+  const sh = getSheet('Envios', ENV_HEADERS);
+  const rows = sheetRows(sh);
+
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if (String(rows[i][1]) === data) {
+      sh.deleteRow(i + 2);
+    }
+  }
+
+  const ts = new Date().toISOString();
+  const funcionario = d.funcionario || 'ADM';
+  itens.forEach(item => {
+    const qtd = parseInt(item.qtd) || 0;
+    if (qtd <= 0) return;
+    sh.appendRow([ts, data, String(item.produto || ''), qtd, funcionario]);
+  });
+
+  return { ok: true, data };
 }
 
 // ── Fechar Caixa ───────────────────────────────────────────────
