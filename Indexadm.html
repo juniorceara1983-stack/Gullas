@@ -613,8 +613,8 @@ async function carregarEstufa() {
         const enviado = parseInt(envios[prod]) || 0;
         const vendido = parseInt((vendas[prod] && vendas[prod].qtd) || 0) || 0;
         const disponivel = Math.max(enviado - vendido, 0);
-        const sugerido = Math.max(vendido - enviado, 0);
-        return { produto: prod, enviado, vendido, disponivel, sugerido };
+        const qtdSugerida = Math.max(vendido - enviado, 0);
+        return { produto: prod, enviado, vendido, disponivel, qtdSugerida };
       });
 
     renderEstufa();
@@ -635,7 +635,7 @@ function renderEstufa() {
       <td class="tr"><input id="env-${i}" class="inp" type="number" min="0" value="${r.enviado}" oninput="recalcularLinhaEstufa(${i})"></td>
       <td class="tr tb">${r.vendido}</td>
       <td class="tr tb" id="disp-${i}">${r.disponivel}</td>
-      <td class="tr"><input id="sug-${i}" class="inp" type="number" min="0" value="${r.sugerido}"></td>
+      <td class="tr"><input id="sug-${i}" class="inp" type="number" min="0" value="${r.qtdSugerida}"></td>
     </tr>
   `).join('');
 

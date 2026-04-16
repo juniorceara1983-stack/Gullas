@@ -302,19 +302,41 @@ function actionSetDispatch(d) {
   const sh = getSheet('Envios', ENV_HEADERS);
   const rows = sheetRows(sh);
 
-  for (let i = rows.length - 1; i >= 0; i--) {
-    if (String(rows[i][1]) === data) {
-      sh.deleteRow(i + 2);
+  const delRows = [];
+  for (let i = 0; i < rows.length; i++) {
+    if (String(rows[i][1]) === data) delRows.push(i + 2);
+  }
+  if (delRows.length) {
+    delRows.sort((a, b) => a - b);
+    const groups = [];
+    let start = delRows[0], end = delRows[0];
+    for (let i = 1; i < delRows.length; i++) {
+      if (delRows[i] === end + 1) {
+        end = delRows[i];
+      } else {
+        groups.push([start, end - start + 1]);
+        start = delRows[i];
+        end = delRows[i];
+      }
+    }
+    groups.push([start, end - start + 1]);
+    for (let i = groups.length - 1; i >= 0; i--) {
+      sh.deleteRows(groups[i][0], groups[i][1]);
     }
   }
 
   const ts = new Date().toISOString();
   const funcionario = d.funcionario || 'ADM';
+  const novos = [];
   itens.forEach(item => {
     const qtd = parseInt(item.qtd) || 0;
     if (qtd <= 0) return;
-    sh.appendRow([ts, data, String(item.produto || ''), qtd, funcionario]);
+    novos.push([ts, data, String(item.produto || ''), qtd, funcionario]);
   });
+  if (novos.length) {
+    const startRow = sh.getLastRow() + 1;
+    sh.getRange(startRow, 1, novos.length, ENV_HEADERS.length).setValues(novos);
+  }
 
   return { ok: true, data };
 }
