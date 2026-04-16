@@ -298,16 +298,16 @@ function actionGetDispatch(date) {
 
 function actionSetDispatch(d) {
   const data = d.data || hoje();
+  const targetDate = String(data);
   const itens = Array.isArray(d.itens) ? d.itens : [];
   const sh = getSheet('Envios', ENV_HEADERS);
   const rows = sheetRows(sh);
 
   const rowNumbersToDelete = [];
   for (let i = 0; i < rows.length; i++) {
-    if (String(rows[i][1]) === data) rowNumbersToDelete.push(i + 2);
+    if (String(rows[i][1]) === targetDate) rowNumbersToDelete.push(i + 2);
   }
   if (rowNumbersToDelete.length) {
-    rowNumbersToDelete.sort((a, b) => a - b);
     const deleteRanges = [];
     let start = rowNumbersToDelete[0], end = rowNumbersToDelete[0];
     for (let i = 1; i < rowNumbersToDelete.length; i++) {
