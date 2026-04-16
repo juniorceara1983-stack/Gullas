@@ -302,26 +302,26 @@ function actionSetDispatch(d) {
   const sh = getSheet('Envios', ENV_HEADERS);
   const rows = sheetRows(sh);
 
-  const delRows = [];
+  const rowNumbersToDelete = [];
   for (let i = 0; i < rows.length; i++) {
-    if (String(rows[i][1]) === data) delRows.push(i + 2);
+    if (String(rows[i][1]) === data) rowNumbersToDelete.push(i + 2);
   }
-  if (delRows.length) {
-    delRows.sort((a, b) => a - b);
-    const groups = [];
-    let start = delRows[0], end = delRows[0];
-    for (let i = 1; i < delRows.length; i++) {
-      if (delRows[i] === end + 1) {
-        end = delRows[i];
+  if (rowNumbersToDelete.length) {
+    rowNumbersToDelete.sort((a, b) => a - b);
+    const deleteRanges = [];
+    let start = rowNumbersToDelete[0], end = rowNumbersToDelete[0];
+    for (let i = 1; i < rowNumbersToDelete.length; i++) {
+      if (rowNumbersToDelete[i] === end + 1) {
+        end = rowNumbersToDelete[i];
       } else {
-        groups.push([start, end - start + 1]);
-        start = delRows[i];
-        end = delRows[i];
+        deleteRanges.push([start, end - start + 1]);
+        start = rowNumbersToDelete[i];
+        end = rowNumbersToDelete[i];
       }
     }
-    groups.push([start, end - start + 1]);
-    for (let i = groups.length - 1; i >= 0; i--) {
-      sh.deleteRows(groups[i][0], groups[i][1]);
+    deleteRanges.push([start, end - start + 1]);
+    for (let i = deleteRanges.length - 1; i >= 0; i--) {
+      sh.deleteRows(deleteRanges[i][0], deleteRanges[i][1]);
     }
   }
 
