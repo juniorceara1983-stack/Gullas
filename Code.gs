@@ -55,10 +55,13 @@ function getImgFolder() {
   return it.hasNext() ? it.next() : DriveApp.createFolder(name);
 }
 
+const MAX_IMG_BYTES = 5 * 1024 * 1024; // 5 MB limit
+
 function saveImage(base64, filename) {
   try {
     const clean = base64.replace(/^data:image\/\w+;base64,/, '');
     const bytes = Utilities.base64Decode(clean);
+    if (bytes.length > MAX_IMG_BYTES) { return ''; }
     const blob  = Utilities.newBlob(bytes, 'image/jpeg', filename);
     const file  = getImgFolder().createFile(blob);
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);

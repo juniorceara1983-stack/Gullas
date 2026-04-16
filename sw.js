@@ -25,7 +25,9 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', event => {
   // Network-first for API calls; cache-first for static assets
-  if (event.request.url.includes('script.google.com')) {
+  let requestHostname;
+  try { requestHostname = new URL(event.request.url).hostname; } catch { requestHostname = ''; }
+  if (requestHostname === 'script.google.com') {
     event.respondWith(fetch(event.request));
     return;
   }

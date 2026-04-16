@@ -39,6 +39,8 @@ pela URL copiada no passo anterior.
 
 A senha padrão do painel ADM é **`Gullas@2024`**.
 
+> ⚠️ **Importante:** troque esta senha imediatamente após a primeira instalação para evitar acesso não autorizado.
+
 Para alterar, edite a linha em `Indexadm.html`:
 
 ```js
