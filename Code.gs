@@ -279,6 +279,7 @@ function actionGetHistory(from, to) {
 // ── Envios / Estufa ────────────────────────────────────────────
 
 const ENV_HEADERS = ['timestamp', 'data', 'produto', 'qtd', 'funcionario'];
+const HEADER_ROW_OFFSET = 2;
 
 function actionGetDispatch(date) {
   const data = date || hoje();
@@ -305,7 +306,7 @@ function actionSetDispatch(d) {
 
   const rowNumbersToDelete = [];
   for (let i = 0; i < rows.length; i++) {
-    if (String(rows[i][1]) === targetDate) rowNumbersToDelete.push(i + 2);
+    if (String(rows[i][1]) === targetDate) rowNumbersToDelete.push(i + HEADER_ROW_OFFSET);
   }
   if (rowNumbersToDelete.length) {
     const deleteRanges = [];
