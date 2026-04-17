@@ -739,7 +739,7 @@ async function post(body) {
     const jsonMatch = txt.match(/\{[\s\S]*\}/);
     if (jsonMatch) jsonStr = jsonMatch[0];
     try { data = JSON.parse(jsonStr); }
-    catch (err) { throw new Error('Resposta inválida do servidor'); }
+    catch (err) { throw new Error('Resposta inválida do servidor: ' + txt.substring(0, 80)); }
   }
   if (data && data.error) throw new Error(data.error);
   return data;

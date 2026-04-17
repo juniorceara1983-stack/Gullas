@@ -774,7 +774,8 @@ function addItemEstufa() {
   const nome = (inp.value || '').trim();
   if (!nome) { toast('Digite o nome do item'); return; }
   // Check if already exists
-  if (estufaRows.some(r => r.produto.toLowerCase() === nome.toLowerCase())) {
+  const nomeLower = nome.toLowerCase();
+  if (estufaRows.some(r => r.produto.toLowerCase() === nomeLower)) {
     toast('Item já existe na estufa');
     inp.value = '';
     return;
@@ -927,7 +928,7 @@ async function post(body) {
     const jsonMatch = txt.match(/\{[\s\S]*\}/);
     if (jsonMatch) jsonStr = jsonMatch[0];
     try { data = JSON.parse(jsonStr); }
-    catch (err) { throw new Error('Resposta inválida do servidor'); }
+    catch (err) { throw new Error('Resposta inválida do servidor: ' + txt.substring(0, 80)); }
   }
   if (data && data.error) throw new Error(data.error);
   return data;
