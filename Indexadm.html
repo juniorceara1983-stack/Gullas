@@ -1159,10 +1159,13 @@ async function executarReabertura() {
 // Estado do caixa de HOJE. Atualizado no login, após fechar/reabrir,
 // e ao voltar o foco para a aba.
 let _caixaHojeFechado = null; // null = desconhecido, true/false = status conhecido
+let _caixaHojeUltimoCheck = 0;
+const CAIXA_HDR_MIN_INTERVALO_MS = 30000;
 
 async function atualizarStatusCaixaHeader() {
   const btn = document.getElementById('btn-hdr-caixa');
   if (!btn) return;
+  _caixaHojeUltimoCheck = Date.now();
   const icone = document.getElementById('btn-hdr-caixa-icone');
   const label = document.getElementById('btn-hdr-caixa-label');
   btn.classList.remove('aberto', 'fechado');
@@ -1213,10 +1216,12 @@ function acaoCaixaHeader() {
   }
 }
 
-// Revalida o status ao retornar o foco para a aba (ex.: virada de dia).
+// Revalida o status ao retornar o foco para a aba (ex.: virada de dia),
+// respeitando um intervalo mínimo para evitar requisições excessivas.
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' &&
-      localStorage.getItem('gullas_adm') === '1') {
+      localStorage.getItem('gullas_adm') === '1' &&
+      (Date.now() - _caixaHojeUltimoCheck) >= CAIXA_HDR_MIN_INTERVALO_MS) {
     atualizarStatusCaixaHeader();
   }
 });
