@@ -733,13 +733,7 @@ async function salvarEnviosEstufa() {
   if (!itens.length) { toast('Informe ao menos 1 envio'); return; }
   try {
     await post({ action: 'setDispatch', data, itens, funcionario: 'ADM' });
-    const ts = new Date();
-    const tsFmt = ts.getFullYear()
-      + '-' + String(ts.getMonth() + 1).padStart(2, '0')
-      + '-' + String(ts.getDate()).padStart(2, '0')
-      + ' ' + String(ts.getHours()).padStart(2, '0')
-      + ':' + String(ts.getMinutes()).padStart(2, '0')
-      + ':' + String(ts.getSeconds()).padStart(2, '0');
+    const tsFmt = formatTimestampLocal(new Date());
     itens.forEach(i => {
       estufaEnviosHistorico.push({
         timestamp: tsFmt,
@@ -1003,6 +997,16 @@ function hojeLocalISO() {
   const now = new Date();
   const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
   return local.toISOString().slice(0, 10);
+}
+
+function formatTimestampLocal(date) {
+  const d = date instanceof Date ? date : new Date(date);
+  return d.getFullYear()
+    + '-' + String(d.getMonth() + 1).padStart(2, '0')
+    + '-' + String(d.getDate()).padStart(2, '0')
+    + ' ' + String(d.getHours()).padStart(2, '0')
+    + ':' + String(d.getMinutes()).padStart(2, '0')
+    + ':' + String(d.getSeconds()).padStart(2, '0');
 }
 </script>
 </body>
