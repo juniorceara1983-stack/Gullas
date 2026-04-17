@@ -247,6 +247,7 @@ function doPost(e) {
       case 'updateItem':  result = actionUpdateItem(d);  break;
       case 'removeItem':  result = actionRemoveItem(d);  break;
       case 'fechar':      result = actionFechar(d);      break;
+      case 'reabrir':     result = actionReabrir(d);     break;
       default:            result = { error: 'acao_desconhecida' };
     }
   } catch (ex) {
@@ -575,4 +576,70 @@ function actionFechar(d) {
     enviosRegistros: dispatch.registros,
     fechado: true
   };
+}
+
+// ── Reabrir Caixa ──────────────────────────────────────────────
+// Desfaz o fechamento do dia: restaura as linhas de Envios a partir do
+// snapshot JSON gravado em Fechamentos e remove a(s) linha(s) de
+// Fechamentos para a data. Permite corrigir fechamentos feitos por
+// descuido sem iniciar um novo dia. Uso restrito ao painel admin.
+function actionReabrir(d) {
+  const data = normalizaDataISO(d && d.data);
+  const sh   = getSheet(SHEET_FECHAMENTOS, FECH_HEADERS);
+  const lr   = sh.getLastRow();
+  if (lr < 2) {
+    return { error: 'nao_fechado: nenhum fechamento encontrado para ' + data };
+  }
+
+  const values = sh.getRange(2, 1, lr - 1, FECH_HEADERS.length).getValues();
+
+  // Localiza o fechamento mais recente para a data (maior índice).
+  let targetIdx = -1;
+  let targetRow = null;
+  for (let i = values.length - 1; i >= 0; i--) {
+    if (dataCelula(values[i][1]) === data) {
+      targetIdx = i;
+      targetRow = values[i];
+      break;
+    }
+  }
+  if (targetIdx < 0) {
+    return { error: 'nao_fechado: nenhum fechamento encontrado para ' + data };
+  }
+
+  // Restaura envios a partir do snapshot JSON (coluna detalhes_json).
+  let restaurados = 0;
+  try {
+    const detalhes = JSON.parse(String(targetRow[7] || '{}'));
+    const registros = Array.isArray(detalhes.envios_registros)
+      ? detalhes.envios_registros
+      : [];
+    if (registros.length) {
+      const shEnv = getSheet(SHEET_ENVIOS, ENV_HEADERS);
+      const novos = registros.map(reg => ([
+        reg && reg.timestamp ? String(reg.timestamp) : agora(),
+        data,
+        String((reg && reg.produto) || ''),
+        parseInt(reg && reg.qtd) || 0,
+        String((reg && reg.funcionario) || '')
+      ])).filter(row => row[2] && row[3] > 0);
+      if (novos.length) {
+        const startRow = shEnv.getLastRow() + 1;
+        shEnv.getRange(startRow, 1, novos.length, ENV_HEADERS.length).setValues(novos);
+        restaurados = novos.length;
+      }
+    }
+  } catch (e) {
+    // Se o snapshot estiver corrompido, ainda removemos o fechamento para
+    // permitir que o admin reabra o dia manualmente.
+  }
+
+  // Remove TODAS as linhas de fechamento para a data (garante estado aberto).
+  for (let i = values.length - 1; i >= 0; i--) {
+    if (dataCelula(values[i][1]) === data) {
+      sh.deleteRow(i + 2);
+    }
+  }
+
+  return { ok: true, data, reabertos: restaurados, fechado: false };
 }
