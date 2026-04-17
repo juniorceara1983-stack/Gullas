@@ -310,8 +310,8 @@
     <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png"
          class="modal-logo" alt="">
     <div class="modal-title" id="modal-ok-titulo">Pronto!</div>
-    <div class="modal-msg" id="modal-ok-msg" style="font-style:italic;"></div>
-    <button class="btn btn-primary btn-full" onclick="location.reload()">AMÉM 🙏</button>
+    <div class="modal-msg" id="modal-ok-msg" style="font-style:italic;white-space:pre-line;"></div>
+    <button class="btn btn-primary btn-full" onclick="fecharModalOk()">AMÉM 🙏</button>
   </div>
 </div>
 
@@ -342,9 +342,15 @@
       <button class="btn btn-primary" onclick="carregarEstufa()">🔍</button>
     </div>
     <div id="e-table"><div class="empty">Selecione uma data e clique em 🔍</div></div>
+    <div style="margin-top:10px;">
+      <div class="drow">
+        <input id="e-novo-item" type="text" class="inp" placeholder="Novo item…" maxlength="50">
+        <button class="btn btn-secondary" onclick="addItemEstufa()">+ ADD</button>
+      </div>
+    </div>
     <div class="g2 mt-14">
       <button class="btn btn-success" onclick="salvarEnviosEstufa()">💾 SALVAR ENVIADO</button>
-      <button class="btn btn-primary" onclick="enviarSugestaoZap()">📲 ENVIAR SUGESTÃO (ZAP)</button>
+      <button class="btn btn-primary" onclick="enviarSugestaoZap()">📲 ENVIAR P/ ZAP</button>
     </div>
     <button class="btn btn-secondary btn-full mt-10" onclick="fecharModalEstufa()">FECHAR</button>
   </div>
@@ -426,6 +432,10 @@ function mudarAba(aba) {
   else if (aba === 'sobras') carregarSobras();
   else if (aba === 'estufa') abrirModalEstufa();
   else if (aba === 'resumo') carregarResumo();
+}
+
+function fecharModalOk() {
+  document.getElementById('modal-ok').classList.remove('open');
 }
 
 // ── Catálogo ─────────────────────────────────────────────────
@@ -589,7 +599,7 @@ function renderSobras(sobras) {
 // ── Estufa ────────────────────────────────────────────────────
 function abrirModalEstufa() {
   document.getElementById('modal-estufa').classList.add('open');
-  if (!estufaRows.length) carregarEstufa();
+  carregarEstufa();
 }
 
 function fecharModalEstufa() {
@@ -711,19 +721,76 @@ async function salvarEnviosEstufa() {
 
 function enviarSugestaoZap() {
   if (!estufaRows.length) { toast('Carregue a estufa primeiro'); return; }
-  const itens = estufaRows
+
+  // Collect items from suggestion inputs
+  const sugestoes = estufaRows
     .map((r, i) => ({
       produto: r.produto,
       qtd: Math.max(parseInt(document.getElementById('sug-' + i)?.value) || 0, 0)
     }))
     .filter(i => i.qtd > 0);
 
-  if (!itens.length) { toast('Informe ao menos 1 sugestão'); return; }
+  // Also include items with "Enviar agora" > 0
+  const envios = estufaRows
+    .map((r, i) => ({
+      produto: r.produto,
+      qtd: Math.max(parseInt(document.getElementById('env-' + i)?.value) || 0, 0)
+    }))
+    .filter(i => i.qtd > 0);
+
+  if (!sugestoes.length && !envios.length) { toast('Informe ao menos 1 item para enviar'); return; }
 
   const data = document.getElementById('e-data').value || '—';
-  const linhas = itens.map(i => `• ${i.produto}: ${i.qtd}`).join('\n');
-  const msg = `Gullas - Sugestão de nova remessa (${data})\n\n${linhas}`;
-  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+  let msg = '🧁 *Gullas - Estufa (' + data + ')*\n\n';
+
+  // Current status
+  msg += '📊 *Status Atual:*\n';
+  estufaRows.forEach(r => {
+    if (r.enviado > 0 || r.vendido > 0) {
+      msg += '• ' + r.produto + ': Enviado ' + r.enviado + ' | Vendido ' + r.vendido + ' | Disp. ' + r.disponivel + '\n';
+    }
+  });
+
+  if (sugestoes.length) {
+    msg += '\n📋 *Sugestão de Envio:*\n';
+    sugestoes.forEach(i => { msg += '• ' + i.produto + ': ' + i.qtd + '\n'; });
+  }
+
+  if (envios.length) {
+    msg += '\n🚀 *Enviar Agora:*\n';
+    envios.forEach(i => { msg += '• ' + i.produto + ': ' + i.qtd + '\n'; });
+  }
+
+  const url = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(msg);
+  const win = window.open(url, '_blank');
+  if (!win) {
+    // Fallback for popup blockers
+    window.location.href = url;
+  }
+}
+
+function addItemEstufa() {
+  const inp = document.getElementById('e-novo-item');
+  const nome = (inp.value || '').trim();
+  if (!nome) { toast('Digite o nome do item'); return; }
+  // Check if already exists
+  if (estufaRows.some(r => r.produto.toLowerCase() === nome.toLowerCase())) {
+    toast('Item já existe na estufa');
+    inp.value = '';
+    return;
+  }
+  estufaRows.push({
+    produto: nome,
+    enviado: 0, vendido: 0, disponivel: 0,
+    sugestaoEnvio: 0, enviarAgora: 0
+  });
+  renderEstufa();
+  inp.value = '';
+  toast(nome + ' adicionado à estufa');
+  // Also try to add to catalog in background
+  post({ action: 'addItem', nome, preco: 0 }).then(() => {
+    carregarCatalogo();
+  }).catch(() => {});
 }
 
 // ── Resumo ────────────────────────────────────────────────────
@@ -775,16 +842,22 @@ async function executarFechamento() {
   if (!data) { toast('Selecione uma data no resumo'); return; }
   document.getElementById('modal-fechar').classList.remove('open');
   try {
-    const r   = await post({ action: 'fechar', funcionario: 'ADM', data });
+    const r = await post({ action: 'fechar', funcionario: 'ADM', data });
     const msg = MSGS[Math.floor(Math.random() * MSGS.length)];
-    const total = (r && typeof r.total === 'number')
-      ? r.total
-      : ((balanceDia && balanceDia.vendas)
-          ? Object.values(balanceDia.vendas).reduce((a, v) => a + v.qtd * v.preco, 0)
-          : 0);
-    document.getElementById('modal-ok-titulo').textContent =
-      'Caixa fechado (' + data + ')! Total: ' + brl(total);
-    document.getElementById('modal-ok-msg').textContent = msg;
+    const total = (r && typeof r.total === 'number') ? r.total : 0;
+    const itensVendidos = (r && r.itensVendidos) || 0;
+    const totalSobras = (r && r.totalSobras) || 0;
+    const obsCount = (r && r.obsCount) || 0;
+
+    let titulo = 'Caixa fechado (' + data + ')!';
+    let detalhes = '💰 Faturamento: ' + brl(total) + '\n';
+    detalhes += '🛒 Itens vendidos: ' + itensVendidos + '\n';
+    detalhes += '📦 Sobras: ' + totalSobras;
+    if (obsCount > 0) detalhes += '\n⚠️ Observações: ' + obsCount;
+    detalhes += '\n\n' + msg;
+
+    document.getElementById('modal-ok-titulo').textContent = titulo;
+    document.getElementById('modal-ok-msg').textContent = detalhes;
     document.getElementById('modal-ok').classList.add('open');
     carregarResumo();
   } catch { toast('Erro ao fechar caixa'); }
@@ -842,14 +915,19 @@ function gerarPDF() {
 async function post(body) {
   const r = await fetch(SCRIPT_URL, {
     method: 'POST',
+    redirect: 'follow',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(body)
   });
   const txt = await r.text();
   let data = {};
   if (txt) {
-    try { data = JSON.parse(txt); }
-    catch (err) { throw new Error('Resposta inválida do servidor: ' + err.message); }
+    // Google Apps Script may wrap JSON in HTML; try to extract it
+    let jsonStr = txt;
+    const jsonMatch = txt.match(/\{[\s\S]*\}/);
+    if (jsonMatch) jsonStr = jsonMatch[0];
+    try { data = JSON.parse(jsonStr); }
+    catch (err) { throw new Error('Resposta inválida do servidor'); }
   }
   if (data && data.error) throw new Error(data.error);
   return data;
