@@ -532,7 +532,7 @@ async function fecharCaixaLoja() {
   if (btn) { btn.disabled = true; btn.textContent = 'FECHANDO…'; }
   try {
     const r = await post({ action: 'fechar', funcionario: nomeFuncionario, data });
-    showModalOk('Caixa fechado (' + data + ')! Total: R$ ' + ((r.total || 0).toFixed(2).replace('.', ',')));
+    showModalOk('Caixa fechado (' + data + ')! Total: ' + brl(r.total || 0));
   } catch {
     toast('Erro ao fechar caixa');
   } finally {
@@ -606,10 +606,14 @@ async function post(body) {
   let data = {};
   if (txt) {
     try { data = JSON.parse(txt); }
-    catch { throw new Error('resposta_invalida_do_servidor'); }
+    catch { throw new Error('Resposta inválida do servidor'); }
   }
   if (data && data.error) throw new Error(data.error);
   return data;
+}
+
+function brl(n) {
+  return 'R$ ' + (parseFloat(n) || 0).toFixed(2).replace('.', ',');
 }
 
 function resetField(id) { const el = document.getElementById(id); if (el) el.value = ''; }

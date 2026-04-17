@@ -42,6 +42,8 @@ function agora() {
   return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm:ss');
 }
 
+// Normaliza entradas de data para yyyy-MM-dd.
+// Se a entrada for vazia ou inválida, usa a data atual do fuso do script.
 function normalizaDataISO(value) {
   if (!value) return hoje();
   const s = String(value).trim();

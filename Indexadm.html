@@ -849,7 +849,7 @@ async function post(body) {
   let data = {};
   if (txt) {
     try { data = JSON.parse(txt); }
-    catch { throw new Error('resposta_invalida_do_servidor'); }
+    catch { throw new Error('Resposta inválida do servidor'); }
   }
   if (data && data.error) throw new Error(data.error);
   return data;
