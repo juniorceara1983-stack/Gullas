@@ -44,6 +44,14 @@
     .hdr-badge  { background: var(--primary); color: white; font-size: .7rem; font-weight: 800;
                   padding: 3px 8px; border-radius: 20px; }
     .hdr-logout { background: none; border: none; color: #64748b; font-size: 1.15rem; cursor: pointer; padding: 4px; }
+    .hdr-caixa  { background: #334155; border: none; color: #e2e8f0; font-size: .72rem; font-weight: 700;
+                  padding: 6px 10px; border-radius: 16px; cursor: pointer; display: inline-flex;
+                  align-items: center; gap: 4px; transition: background .2s, color .2s; }
+    .hdr-caixa:hover     { background: #475569; }
+    .hdr-caixa.aberto    { background: #064e3b; color: #a7f3d0; }
+    .hdr-caixa.fechado   { background: #7f1d1d; color: #fecaca; animation: pulseCx 2s ease-in-out infinite; }
+    .hdr-caixa.loading   { opacity: .6; cursor: wait; }
+    @keyframes pulseCx { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.6);} 50%{box-shadow:0 0 0 6px rgba(239,68,68,0);} }
 
     /* ── Tabs ── */
     .tab-bar { display: flex; background: #0f172a; overflow-x: auto; scrollbar-width: none; }
@@ -192,6 +200,12 @@
          class="hdr-logo" alt="">
     <span class="hdr-title">Gullas</span>
     <span class="hdr-badge">ADM</span>
+    <button id="btn-hdr-caixa" class="hdr-caixa loading"
+            onclick="acaoCaixaHeader()"
+            title="Status do caixa de hoje">
+      <span id="btn-hdr-caixa-icone">⏳</span>
+      <span id="btn-hdr-caixa-label">Caixa</span>
+    </button>
     <button class="hdr-logout" onclick="fazerLogout()" title="Sair">🚪</button>
   </div>
 
@@ -279,6 +293,9 @@
 
     <div id="resumo-fechado-banner" class="banner-warn" style="display:none;margin:10px 12px;">
       🔒 Caixa já foi fechado para esta data
+      <div style="font-size:.78rem;font-weight:500;margin-top:4px;color:#7f1d1d;">
+        Um novo dia começa automaticamente à meia-noite (00:00). Para reabrir esta data (caso tenha sido fechada por engano), use o botão "🔓 Reabrir Caixa" abaixo ou o botão de caixa no cabeçalho.
+      </div>
     </div>
 
     <div id="resumo-envios-card" class="card" style="display:none;">
@@ -330,10 +347,29 @@
     <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png"
          class="modal-logo" alt="">
     <div class="modal-title">Reabrir Caixa?</div>
-    <div class="modal-msg">O fechamento registrado para esta data será desfeito e os envios do dia serão restaurados.<br>Use apenas se o caixa foi fechado por descuido.</div>
+    <div class="modal-msg">
+      O fechamento registrado para <b id="modal-reabrir-data">esta data</b> será desfeito e os envios do dia serão restaurados.<br>
+      Use apenas se o caixa foi fechado por engano.<br><br>
+      <small>ℹ️ Não há reabertura automática por horário. Um novo dia começa automaticamente à meia-noite (00:00) com os contadores zerados — cada data tem seu próprio fechamento.</small>
+    </div>
     <button class="btn btn-primary btn-full" onclick="executarReabertura()">SIM, REABRIR CAIXA</button>
     <button class="btn btn-secondary btn-full mt-10"
             onclick="document.getElementById('modal-reabrir').classList.remove('open')">CANCELAR</button>
+  </div>
+</div>
+
+<!-- Caixa já aberto (info) -->
+<div id="modal-caixa-aberto" class="modal-bg">
+  <div class="modal">
+    <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png"
+         class="modal-logo" alt="">
+    <div class="modal-title">Caixa aberto 🔓</div>
+    <div class="modal-msg">
+      O caixa de hoje (<b id="modal-caixa-aberto-data">—</b>) está <b>aberto</b> e pronto para operar.<br><br>
+      <small>ℹ️ Não há reabertura automática programada. O próximo dia começa automaticamente à meia-noite (00:00) com os contadores zerados. Se o caixa for fechado por engano, use o botão "🔓 Reabrir Caixa" para desfazer o fechamento da data.</small>
+    </div>
+    <button class="btn btn-primary btn-full"
+            onclick="document.getElementById('modal-caixa-aberto').classList.remove('open')">ENTENDI</button>
   </div>
 </div>
 
@@ -434,6 +470,7 @@ function ativarDashboard() {
   });
   mostrarTela('tela-principal');
   carregarCatalogo();
+  atualizarStatusCaixaHeader();
 }
 
 // ── Login / Logout ───────────────────────────────────────────
@@ -1080,6 +1117,7 @@ async function executarFechamento() {
     document.getElementById('modal-ok-msg').textContent = detalhes;
     document.getElementById('modal-ok').classList.add('open');
     carregarResumo();
+    atualizarStatusCaixaHeader();
     // Se a Estufa estiver aberta, recarrega para refletir a zeragem.
     const modalEstufa = document.getElementById('modal-estufa');
     if (modalEstufa && modalEstufa.classList.contains('open')) {
@@ -1088,7 +1126,12 @@ async function executarFechamento() {
   } catch { toast('Erro ao fechar caixa'); }
 }
 
-function abrirModalReabrir() { document.getElementById('modal-reabrir').classList.add('open'); }
+function abrirModalReabrir() {
+  const data = document.getElementById('r-data').value || hojeLocalISO();
+  const lbl = document.getElementById('modal-reabrir-data');
+  if (lbl) lbl.textContent = data;
+  document.getElementById('modal-reabrir').classList.add('open');
+}
 
 async function executarReabertura() {
   const data = document.getElementById('r-data').value;
@@ -1104,12 +1147,79 @@ async function executarReabertura() {
       (reabertos ? '\n📤 Registros de envios restaurados: ' + reabertos : '');
     document.getElementById('modal-ok').classList.add('open');
     carregarResumo();
+    atualizarStatusCaixaHeader();
     const modalEstufa = document.getElementById('modal-estufa');
     if (modalEstufa && modalEstufa.classList.contains('open')) {
       carregarEstufa();
     }
   } catch { toast('Erro ao reabrir caixa'); }
 }
+
+// ── Botão de Caixa no Cabeçalho ───────────────────────────────
+// Estado do caixa de HOJE. Atualizado no login, após fechar/reabrir,
+// e ao voltar o foco para a aba.
+let _caixaHojeFechado = null; // null = desconhecido, true/false = status conhecido
+
+async function atualizarStatusCaixaHeader() {
+  const btn = document.getElementById('btn-hdr-caixa');
+  if (!btn) return;
+  const icone = document.getElementById('btn-hdr-caixa-icone');
+  const label = document.getElementById('btn-hdr-caixa-label');
+  btn.classList.remove('aberto', 'fechado');
+  btn.classList.add('loading');
+  icone.textContent = '⏳';
+  label.textContent = 'Caixa';
+  try {
+    const hoje = hojeLocalISO();
+    const r = await fetch(SCRIPT_URL + '?action=report&date=' + hoje);
+    const d = await r.json();
+    _caixaHojeFechado = !!(d && d.fechado);
+    btn.classList.remove('loading');
+    if (_caixaHojeFechado) {
+      btn.classList.add('fechado');
+      icone.textContent = '🔒';
+      label.textContent = 'Reabrir';
+      btn.title = 'Caixa de hoje está FECHADO — clique para reabrir';
+    } else {
+      btn.classList.add('aberto');
+      icone.textContent = '🔓';
+      label.textContent = 'Aberto';
+      btn.title = 'Caixa de hoje está aberto';
+    }
+  } catch {
+    btn.classList.remove('loading');
+    icone.textContent = '⚠️';
+    label.textContent = 'Caixa';
+    btn.title = 'Não foi possível verificar o status do caixa';
+    _caixaHojeFechado = null;
+  }
+}
+
+function acaoCaixaHeader() {
+  const btn = document.getElementById('btn-hdr-caixa');
+  if (btn && btn.classList.contains('loading')) return;
+  const hoje = hojeLocalISO();
+  if (_caixaHojeFechado === true) {
+    // Garante que a reabertura opere sobre a data de hoje.
+    document.getElementById('r-data').value = hoje;
+    abrirModalReabrir();
+  } else if (_caixaHojeFechado === false) {
+    const lbl = document.getElementById('modal-caixa-aberto-data');
+    if (lbl) lbl.textContent = hoje;
+    document.getElementById('modal-caixa-aberto').classList.add('open');
+  } else {
+    // Status desconhecido: tenta atualizar novamente.
+    atualizarStatusCaixaHeader();
+  }
+}
+
+// Revalida o status ao retornar o foco para a aba (ex.: virada de dia).
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' &&
+      localStorage.getItem('gullas_adm') === '1') {
+    atualizarStatusCaixaHeader();
+  }
+});
 
 // ── PDF ───────────────────────────────────────────────────────
 function gerarPDF() {
