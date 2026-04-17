@@ -755,7 +755,7 @@ function actionReabrir(d) {
         parseInt(reg && reg.qtd) || 0,
         String((reg && reg.funcionario) || ''),
         normalizaLoja((reg && reg.loja) || detalhes.loja || loja)
-      ])).filter(row => row[2] && row[3] > 0 && incluiLoja(row[5], loja));
+      ])).filter(row => row[2] && row[3] > 0);
       if (novos.length) {
         const startRow = shEnv.getLastRow() + 1;
         shEnv.getRange(startRow, 1, novos.length, ENV_HEADERS.length).setValues(novos);
@@ -771,9 +771,7 @@ function actionReabrir(d) {
   for (let i = values.length - 1; i >= 0; i--) {
     if (dataCelula(values[i][1]) !== data) continue;
     if (loja !== LOJA_GERAL && normalizaLoja(values[i][8]) !== loja) continue;
-    if (loja === LOJA_GERAL || normalizaLoja(values[i][8]) === loja) {
-      sh.deleteRow(i + 2);
-    }
+    sh.deleteRow(i + 2);
   }
 
   return { ok: true, data, loja, reabertos: restaurados, fechado: false };
