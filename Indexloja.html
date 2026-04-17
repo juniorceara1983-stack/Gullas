@@ -603,7 +603,11 @@ async function post(body) {
     body: JSON.stringify(body)
   });
   const txt = await r.text();
-  const data = txt ? JSON.parse(txt) : {};
+  let data = {};
+  if (txt) {
+    try { data = JSON.parse(txt); }
+    catch { throw new Error('resposta_invalida_do_servidor'); }
+  }
   if (data && data.error) throw new Error(data.error);
   return data;
 }
