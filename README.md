@@ -68,7 +68,7 @@ A senha digitada na primeira sessão é armazenada localmente no dispositivo do 
 | **Catálogo** | Cadastrar, editar e remover produtos com preço unitário |
 | **Vendas** | Visualizar vendas por data com quantidade, preço unitário, subtotal e **total faturado** |
 | **Sobras** | Visualizar sobras registradas pelas atendentes por data |
-| **Estufa** | Controlar quantidades enviadas, vendido/disponível e gerar sugestão de nova remessa via WhatsApp |
+| **Estufa** | Controlar quantidades enviadas por data, registrar **envios acumulados ao longo do dia**, acompanhar vendido/disponível em tempo real e gerar sugestão de nova remessa via WhatsApp |
 | **Resumo** | KPIs do dia (faturamento, itens vendidos, sobras, observações) + exportação em **PDF** |
 | **Fechar Caixa** | Registra encerramento do dia e salva total na planilha |
 
@@ -82,6 +82,7 @@ O Apps Script cria as abas automaticamente na primeira execução:
 |---|---|
 | `Catalogo` | id · nome · preco · ativo |
 | `Movimentos` | timestamp · data · tipo · produto · qtd · preco_unit · total · funcionario · obs · imagem_url |
+| `Envios` | timestamp · data · produto · qtd · funcionario |
 | `Fechamentos` | timestamp · data · funcionario · total_venda |
 
 ---
