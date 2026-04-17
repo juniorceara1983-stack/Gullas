@@ -43,6 +43,7 @@
     .btn:disabled { background: #cbd5e1 !important; cursor: not-allowed; }
     .btn-primary { background: var(--primary); color: white; }
     .btn-success { background: var(--success); color: white; }
+    .btn-danger  { background: var(--danger); color: white; }
     .btn-ghost   { background: var(--border); color: var(--text); }
 
     /* ── Header ── */
@@ -215,6 +216,7 @@
       </label>
       <img id="sob-img-prev" class="img-prev" alt="">
       <button class="btn btn-primary mt-14" id="btn-sob" onclick="enviarSobras()">ENVIAR SOBRAS DO DIA</button>
+      <button class="btn btn-danger mt-10" id="btn-fechar-loja" onclick="fecharCaixaLoja()">🔒 FECHAR CAIXA DO DIA</button>
     </div>
   </div>
 </div>
@@ -449,10 +451,7 @@ async function enviarVenda() {
 
   btn.textContent = 'ENVIANDO…'; btn.disabled = true;
   try {
-    await fetch(SCRIPT_URL, {
-      method: 'POST', mode: 'no-cors',
-      body: JSON.stringify({ action: 'sale', itens, funcionario: nomeFuncionario, obs, imagemBase64: imgB64 })
-    });
+    await post({ action: 'sale', itens, funcionario: nomeFuncionario, data: hojeLocalISO(), obs, imagemBase64: imgB64 });
     selecionados.clear();
     resetField('v-obs'); resetFile('v-img', 'v-img-prev');
     document.getElementById('basket').classList.remove('show');
@@ -491,10 +490,7 @@ async function enviarSobras() {
 
   btn.textContent = 'ENVIANDO…'; btn.disabled = true;
   try {
-    await fetch(SCRIPT_URL, {
-      method: 'POST', mode: 'no-cors',
-      body: JSON.stringify({ action: 'sobra', itens, funcionario: nomeFuncionario, obs, imagemBase64: imgB64 })
-    });
+    await post({ action: 'sobra', itens, funcionario: nomeFuncionario, data: hojeLocalISO(), obs, imagemBase64: imgB64 });
     resetField('sob-obs'); resetFile('sob-img', 'sob-img-prev');
     catalogo.forEach(it => {
       const el = document.getElementById('si-' + it.id);
@@ -518,10 +514,7 @@ async function adicionarProduto() {
   const nome = document.getElementById('novo-nome').value.trim();
   if (!nome) { toast('Digite o nome do produto'); return; }
   try {
-    await fetch(SCRIPT_URL, {
-      method: 'POST', mode: 'no-cors',
-      body: JSON.stringify({ action: 'addItem', nome, preco: 0 })
-    });
+    await post({ action: 'addItem', nome, preco: 0 });
     const tempId = Date.now();
     catalogo.push({ id: tempId, nome, preco: 0 });
     localStorage.setItem('gullas_cat', JSON.stringify(catalogo));
@@ -529,6 +522,22 @@ async function adicionarProduto() {
     fecharModalNovo();
     toast(nome + ' adicionado!');
   } catch { toast('Erro ao adicionar produto'); }
+}
+
+async function fecharCaixaLoja() {
+  if (!nomeFuncionario) { toast('Faça login novamente'); return; }
+  const data = hojeLocalISO();
+  if (!confirm('Confirmar fechamento do caixa de ' + data + '?')) return;
+  const btn = document.getElementById('btn-fechar-loja');
+  if (btn) { btn.disabled = true; btn.textContent = 'FECHANDO…'; }
+  try {
+    const r = await post({ action: 'fechar', funcionario: nomeFuncionario, data });
+    showModalOk('Caixa fechado (' + data + ')! Total: ' + brl(r.total || 0));
+  } catch {
+    toast('Erro ao fechar caixa');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔒 FECHAR CAIXA DO DIA'; }
+  }
 }
 
 // ── Modals ────────────────────────────────────────────────────
@@ -587,6 +596,26 @@ function imgBase64(inputId) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────
+async function post(body) {
+  const r = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body)
+  });
+  const txt = await r.text();
+  let data = {};
+  if (txt) {
+    try { data = JSON.parse(txt); }
+    catch (err) { throw new Error('Resposta inválida do servidor: ' + err.message); }
+  }
+  if (data && data.error) throw new Error(data.error);
+  return data;
+}
+
+function brl(n) {
+  return 'R$ ' + (parseFloat(n) || 0).toFixed(2).replace('.', ',');
+}
+
 function resetField(id) { const el = document.getElementById(id); if (el) el.value = ''; }
 function resetFile(inputId, prevId) {
   const inp = document.getElementById(inputId); if (inp) inp.value = '';
@@ -605,6 +634,14 @@ function esc(str) {
   return String(str)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Retorna a data local do dispositivo em yyyy-MM-dd,
+// compensando o timezoneOffset antes de gerar o ISO.
+function hojeLocalISO() {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
 }
 </script>
 </body>
