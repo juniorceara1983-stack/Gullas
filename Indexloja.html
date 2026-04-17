@@ -152,6 +152,28 @@
     .pb-basket { padding-bottom: 76px; }
     .mt-10 { margin-top: 10px; }
     .mt-14 { margin-top: 14px; }
+
+    /* ── KPI (Painel) ── */
+    .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .kpi { background: var(--card); border-radius: var(--r); padding: 14px;
+           box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+    .kpi-lbl { font-size: .7rem; color: var(--muted); font-weight: 700;
+               text-transform: uppercase; margin-bottom: 6px; }
+    .kpi-val { font-size: 1.35rem; font-weight: 800; }
+    .kpi-val.g { color: var(--success); }
+    .kpi-val.a { color: var(--primary); }
+
+    /* ── Table (Painel) ── */
+    .tbl { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    .tbl th { text-align: left; padding: 9px 8px; border-bottom: 2px solid var(--border);
+              color: var(--muted); font-weight: 700; font-size: .72rem; text-transform: uppercase; }
+    .tbl td { padding: 9px 8px; border-bottom: 1px solid #f1f5f9; }
+    .tbl tr.total-row td { background: #f8fafc; font-weight: 800; font-size: .9rem;
+                           border-top: 2px solid var(--border); border-bottom: none; }
+    .tr { text-align: right; }
+    .tb { font-weight: 700; }
+    .tg { color: var(--success); }
+    .empty { text-align: center; padding: 20px; color: var(--muted); font-size: .88rem; }
   </style>
 </head>
 <body>
@@ -184,6 +206,7 @@
   <div class="tab-bar">
     <button class="tab-btn active" id="tbtn-vendas" onclick="mudarAba('vendas')">🛒 Vendas</button>
     <button class="tab-btn" id="tbtn-sobras" onclick="mudarAba('sobras')">📦 Sobras</button>
+    <button class="tab-btn" id="tbtn-painel" onclick="mudarAba('painel')">📊 Painel</button>
   </div>
 
   <!-- ABA VENDAS -->
@@ -217,6 +240,21 @@
       <img id="sob-img-prev" class="img-prev" alt="">
       <button class="btn btn-primary mt-14" id="btn-sob" onclick="enviarSobras()">ENVIAR SOBRAS DO DIA</button>
       <button class="btn btn-danger mt-10" id="btn-fechar-loja" onclick="fecharCaixaLoja()">🔒 FECHAR CAIXA DO DIA</button>
+    </div>
+  </div>
+
+  <!-- ABA PAINEL -->
+  <div id="tpane-painel" class="tab-pane">
+    <div class="sec">
+      <div class="sec-title">Vendas de Hoje</div>
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-lbl">💰 Faturamento</div><div class="kpi-val g" id="p-fat">—</div></div>
+        <div class="kpi"><div class="kpi-lbl">🛒 Itens Vendidos</div><div class="kpi-val a" id="p-itens">—</div></div>
+      </div>
+      <div id="p-vendas-table" style="margin-top:14px;">
+        <div class="loading"><div class="spin"></div>Carregando…</div>
+      </div>
+      <button class="btn btn-ghost mt-14" onclick="carregarPainel()">🔄 ATUALIZAR PAINEL</button>
     </div>
   </div>
 </div>
@@ -264,7 +302,7 @@
   <div class="modal">
     <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png" class="modal-logo" alt="">
     <div class="modal-title" id="modal-ok-titulo">Enviado!</div>
-    <div class="modal-msg modal-biblical" id="modal-ok-msg"></div>
+    <div class="modal-msg modal-biblical" id="modal-ok-msg" style="white-space:pre-line;"></div>
     <button class="btn btn-primary" onclick="fecharModalOk()">AMÉM 🙏</button>
   </div>
 </div>
@@ -351,6 +389,7 @@ function mudarAba(aba) {
   document.getElementById('tbtn-' + aba).classList.add('active');
   document.getElementById('tpane-' + aba).classList.add('active');
   if (aba === 'sobras') renderSobras();
+  if (aba === 'painel') carregarPainel();
 }
 
 // ── Catálogo ─────────────────────────────────────────────────
@@ -369,12 +408,14 @@ async function carregarCatalogo() {
   }
   renderGrid();
   renderSobras();
+  // Load today's sales panel in background
+  carregarPainel().catch(() => {});
 }
 
 function renderGrid() {
   const g = document.getElementById('prod-grid');
   if (!catalogo.length) {
-    g.innerHTML = '<p style="grid-column:span 2;text-align:center;color:#94a3b8;padding:20px;">Catálogo vazio</p>';
+    g.innerHTML = '<p style="grid-column:span 2;text-align:center;color:#94a3b8;padding:20px;">Catálogo vazio<br><button class="btn btn-ghost mt-10" onclick="carregarCatalogo()" style="margin-top:8px;">🔄 Tentar carregar</button></p>';
     return;
   }
   g.innerHTML = catalogo.map(it =>
@@ -456,6 +497,8 @@ async function enviarVenda() {
     resetField('v-obs'); resetFile('v-img', 'v-img-prev');
     document.getElementById('basket').classList.remove('show');
     showModalOk('Venda registrada! 🎉');
+    // Refresh painel data in background
+    carregarPainel().catch(() => {});
   } catch {
     toast('Erro ao enviar. Verifique a conexão.');
     btn.textContent = '✅ ENVIAR VENDA'; btn.disabled = false;
@@ -497,6 +540,8 @@ async function enviarSobras() {
       if (el) el.value = '';
     });
     showModalOk('Sobras registradas! 📦');
+    // Refresh painel data in background
+    carregarPainel().catch(() => {});
   } catch {
     toast('Erro ao enviar. Verifique a conexão.');
     btn.textContent = 'ENVIAR SOBRAS DO DIA'; btn.disabled = false;
@@ -524,6 +569,79 @@ async function adicionarProduto() {
   } catch { toast('Erro ao adicionar produto'); }
 }
 
+// ── Painel de Vendas do Dia ────────────────────────────────────
+async function carregarPainel() {
+  const div = document.getElementById('p-vendas-table');
+  div.innerHTML = '<div class="loading"><div class="spin"></div>Carregando…</div>';
+  try {
+    const data = hojeLocalISO();
+    const r = await fetch(SCRIPT_URL + '?action=balance&date=' + data);
+    const d = await r.json();
+    renderPainel(d);
+    // Cache painel data
+    localStorage.setItem('gullas_painel', JSON.stringify({ data, balance: d, ts: Date.now() }));
+  } catch {
+    // Try to use cached data
+    const cached = localStorage.getItem('gullas_painel');
+    if (cached) {
+      try {
+        const c = JSON.parse(cached);
+        if (c.data === hojeLocalISO()) {
+          renderPainel(c.balance);
+          toast('Painel offline – usando dados em cache');
+          return;
+        }
+      } catch {}
+    }
+    div.innerHTML = '<div class="empty">Erro ao carregar painel. <br><button class="btn btn-ghost mt-10" onclick="carregarPainel()">🔄 Tentar novamente</button></div>';
+  }
+}
+
+function renderPainel(d) {
+  const vendas = d.vendas || {};
+  const keys = Object.keys(vendas);
+
+  let fat = 0, nItens = 0;
+  keys.forEach(k => {
+    const v = vendas[k];
+    fat += v.qtd * v.preco;
+    nItens += v.qtd;
+  });
+
+  document.getElementById('p-fat').textContent = brl(fat);
+  document.getElementById('p-itens').textContent = nItens;
+
+  const div = document.getElementById('p-vendas-table');
+  if (!keys.length) {
+    div.innerHTML = '<div class="empty">Nenhuma venda registrada hoje</div>';
+    return;
+  }
+
+  let total = 0;
+  const rows = keys.map(k => {
+    const v = vendas[k];
+    const sub = v.qtd * v.preco;
+    total += sub;
+    return `<tr>
+      <td>${esc(k)}</td>
+      <td class="tr">${v.qtd}</td>
+      <td class="tr">${brl(v.preco)}</td>
+      <td class="tr tb tg">${brl(sub)}</td>
+    </tr>`;
+  }).join('');
+
+  div.innerHTML = `
+    <table class="tbl">
+      <thead>
+        <tr><th>Produto</th><th class="tr">Qtd</th><th class="tr">Unit</th><th class="tr">Subtotal</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr class="total-row"><td colspan="3">TOTAL</td><td class="tr tg">${brl(total)}</td></tr>
+      </tfoot>
+    </table>`;
+}
+
 async function fecharCaixaLoja() {
   if (!nomeFuncionario) { toast('Faça login novamente'); return; }
   const data = hojeLocalISO();
@@ -532,7 +650,17 @@ async function fecharCaixaLoja() {
   if (btn) { btn.disabled = true; btn.textContent = 'FECHANDO…'; }
   try {
     const r = await post({ action: 'fechar', funcionario: nomeFuncionario, data });
-    showModalOk('Caixa fechado (' + data + ')! Total: ' + brl(r.total || 0));
+    const total = r.total || 0;
+    const itensVendidos = r.itensVendidos || 0;
+    const totalSobras = r.totalSobras || 0;
+    const obsCount = r.obsCount || 0;
+    let resumo = 'Faturamento: ' + brl(total) + '\n';
+    resumo += 'Itens vendidos: ' + itensVendidos + '\n';
+    resumo += 'Sobras: ' + totalSobras;
+    if (obsCount > 0) resumo += '\nObservações: ' + obsCount;
+    showModalOk('Caixa fechado (' + data + ')!\n' + resumo);
+    // Clear painel cache
+    localStorage.removeItem('gullas_painel');
   } catch {
     toast('Erro ao fechar caixa');
   } finally {
@@ -599,14 +727,19 @@ function imgBase64(inputId) {
 async function post(body) {
   const r = await fetch(SCRIPT_URL, {
     method: 'POST',
+    redirect: 'follow',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(body)
   });
   const txt = await r.text();
   let data = {};
   if (txt) {
-    try { data = JSON.parse(txt); }
-    catch (err) { throw new Error('Resposta inválida do servidor: ' + err.message); }
+    // Google Apps Script may wrap JSON in HTML; try to extract it
+    let jsonStr = txt;
+    const jsonMatch = txt.match(/\{[\s\S]*\}/);
+    if (jsonMatch) jsonStr = jsonMatch[0];
+    try { data = JSON.parse(jsonStr); }
+    catch (err) { throw new Error('Resposta inválida do servidor: ' + txt.substring(0, 80)); }
   }
   if (data && data.error) throw new Error(data.error);
   return data;

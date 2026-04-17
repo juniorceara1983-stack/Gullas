@@ -132,6 +132,9 @@ function doGet(e) {
 function doPost(e) {
   let result = { ok: true };
   try {
+    if (!e || !e.postData || !e.postData.contents) {
+      return jsonOut({ error: 'dados_ausentes: corpo da requisição vazio' });
+    }
     const d = JSON.parse(e.postData.contents);
     switch (d.action) {
       case 'sale':        result = actionSale(d);        break;
@@ -359,12 +362,28 @@ function actionSetDispatch(d) {
 // ── Fechar Caixa ───────────────────────────────────────────────
 
 function actionFechar(d) {
-  const sh      = getSheet('Fechamentos', ['timestamp', 'data', 'funcionario', 'total_venda']);
+  const sh      = getSheet('Fechamentos', ['timestamp', 'data', 'funcionario', 'total_venda', 'itens_vendidos', 'total_sobras', 'obs_count']);
   const data    = normalizaDataISO(d && d.data);
   const balance = actionGetBalance(data);
-  let total = 0;
-  Object.values(balance.vendas).forEach(v => { total += v.qtd * v.preco; });
 
-  sh.appendRow([agora(), data, (d && d.funcionario) || 'ADM', total]);
-  return { ok: true, total, data };
+  let total = 0;
+  let itensVendidos = 0;
+  Object.values(balance.vendas).forEach(v => {
+    total += v.qtd * v.preco;
+    itensVendidos += v.qtd;
+  });
+
+  let totalSobras = 0;
+  Object.values(balance.sobras).forEach(q => { totalSobras += q; });
+
+  const obsCount = (balance.obs || []).length;
+
+  sh.appendRow([agora(), data, (d && d.funcionario) || 'ADM', total, itensVendidos, totalSobras, obsCount]);
+  return {
+    ok: true, data, total,
+    itensVendidos, totalSobras, obsCount,
+    vendas: balance.vendas,
+    sobras: balance.sobras,
+    obs: balance.obs
+  };
 }
