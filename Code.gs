@@ -298,7 +298,6 @@ function actionGetHistory(from, to) {
 // ── Envios / Estufa ────────────────────────────────────────────
 
 const ENV_HEADERS = ['timestamp', 'data', 'produto', 'qtd', 'funcionario'];
-const HEADER_ROW_OFFSET = 2;
 
 function actionGetDispatch(date) {
   const data = date || hoje();
@@ -318,32 +317,8 @@ function actionGetDispatch(date) {
 
 function actionSetDispatch(d) {
   const data = d.data || hoje();
-  const targetDate = String(data);
   const itens = Array.isArray(d.itens) ? d.itens : [];
   const sh = getSheet('Envios', ENV_HEADERS);
-  const rows = sheetRows(sh);
-
-  const rowNumbersToDelete = [];
-  for (let i = 0; i < rows.length; i++) {
-    if (String(rows[i][1]) === targetDate) rowNumbersToDelete.push(i + HEADER_ROW_OFFSET);
-  }
-  if (rowNumbersToDelete.length) {
-    const deleteRanges = [];
-    let start = rowNumbersToDelete[0], end = rowNumbersToDelete[0];
-    for (let i = 1; i < rowNumbersToDelete.length; i++) {
-      if (rowNumbersToDelete[i] === end + 1) {
-        end = rowNumbersToDelete[i];
-      } else {
-        deleteRanges.push([start, end - start + 1]);
-        start = rowNumbersToDelete[i];
-        end = rowNumbersToDelete[i];
-      }
-    }
-    deleteRanges.push([start, end - start + 1]);
-    for (let i = deleteRanges.length - 1; i >= 0; i--) {
-      sh.deleteRows(deleteRanges[i][0], deleteRanges[i][1]);
-    }
-  }
 
   const ts = new Date().toISOString();
   const funcionario = d.funcionario || 'ADM';
@@ -358,7 +333,7 @@ function actionSetDispatch(d) {
     sh.getRange(startRow, 1, novos.length, ENV_HEADERS.length).setValues(novos);
   }
 
-  return { ok: true, data };
+  return { ok: true, data, itensRegistrados: novos.length };
 }
 
 // ── Fechar Caixa ───────────────────────────────────────────────
