@@ -12,15 +12,21 @@
 // ================================================================
 
 const TZ = Session.getScriptTimeZone();
+const SPREADSHEET_ID = '1Ost4-uHKE7qGh_bKarClUcaSvwUG2nRevORp9FO2rsw';
 
 // ── Helpers ────────────────────────────────────────────────────
+
+function getSpreadsheet() {
+  if (SPREADSHEET_ID) return SpreadsheetApp.openById(SPREADSHEET_ID);
+  return SpreadsheetApp.getActiveSpreadsheet();
+}
 
 function hoje() {
   return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
 }
 
 function getSheet(name, headers) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   let sh = ss.getSheetByName(name);
   if (!sh) {
     sh = ss.insertSheet(name);
