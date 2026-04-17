@@ -1000,13 +1000,15 @@ function hojeLocalISO() {
 }
 
 function formatTimestampLocal(date) {
-  const d = date instanceof Date ? date : new Date(date);
-  return d.getFullYear()
-    + '-' + pad2(d.getMonth() + 1)
-    + '-' + pad2(d.getDate())
-    + ' ' + pad2(d.getHours())
-    + ':' + pad2(d.getMinutes())
-    + ':' + pad2(d.getSeconds());
+  const base = date instanceof Date ? new Date(date.getTime()) : new Date(date);
+  if (isNaN(base.getTime())) return '';
+  const local = new Date(base.getTime() - base.getTimezoneOffset() * 60000);
+  return local.getUTCFullYear()
+    + '-' + pad2(local.getUTCMonth() + 1)
+    + '-' + pad2(local.getUTCDate())
+    + ' ' + pad2(local.getUTCHours())
+    + ':' + pad2(local.getUTCMinutes())
+    + ':' + pad2(local.getUTCSeconds());
 }
 
 function pad2(n) {

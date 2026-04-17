@@ -26,7 +26,6 @@ const FECH_HEADERS = [
   'timestamp', 'data', 'funcionario', 'total_venda',
   'itens_vendidos', 'total_sobras', 'obs_count', 'detalhes_json'
 ];
-let SHEET_STRUCTURE_READY = false;
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -93,12 +92,10 @@ function ensureHeaderRow(sh, headers) {
 }
 
 function ensureSheetStructure() {
-  if (SHEET_STRUCTURE_READY) return;
   getSheet('Catalogo', CAT_HEADERS);
   getSheet('Movimentos', MOV_HEADERS);
   getSheet('Envios', ENV_HEADERS);
   getSheet('Fechamentos', FECH_HEADERS);
-  SHEET_STRUCTURE_READY = true;
 }
 
 function sheetRows(sh) {
