@@ -188,6 +188,10 @@
     <div class="login-sub">Identifique-se para começar</div>
     <input id="inp-nome" type="text" class="inp" placeholder="Seu nome…" autocomplete="name"
            style="max-width:320px; margin-bottom:12px;">
+    <select id="inp-loja" class="inp" style="max-width:320px; margin-bottom:12px;">
+      <option value="LOJA PS">Loja PS</option>
+      <option value="LOJA IANDE">Loja Iande</option>
+    </select>
     <button class="btn btn-primary" style="max-width:320px;" onclick="fazerLogin()">ACESSAR</button>
   </div>
 </div>
@@ -325,15 +329,19 @@ const MSGS = [
 
 // ── Estado ──────────────────────────────────────────────────
 let nomeFuncionario = "";
+let lojaSelecionada = "LOJA PS";
 let catalogo = [];       // [{id, nome, preco}]
 let selecionados = new Set();
 
 // ── Init ─────────────────────────────────────────────────────
 (function init() {
   const nome = localStorage.getItem('gullas_nome');
+  const loja = localStorage.getItem('gullas_loja');
+  if (loja) lojaSelecionada = loja;
+  document.getElementById('inp-loja').value = lojaSelecionada;
   if (nome) {
     nomeFuncionario = nome;
-    document.getElementById('hdr-nome').textContent = nome;
+    document.getElementById('hdr-nome').textContent = nome + ' · ' + nomeLoja(lojaSelecionada);
     mostrarTela('tela-principal');
     carregarCatalogo();
   }
@@ -345,20 +353,27 @@ let selecionados = new Set();
 // ── Login / Logout ───────────────────────────────────────────
 function fazerLogin() {
   const nome = document.getElementById('inp-nome').value.trim();
+  const loja = document.getElementById('inp-loja').value;
   if (!nome) { toast('Digite seu nome para continuar'); return; }
+  if (!loja) { toast('Selecione a loja'); return; }
   nomeFuncionario = nome;
+  lojaSelecionada = loja;
   localStorage.setItem('gullas_nome', nome);
-  document.getElementById('hdr-nome').textContent = nome;
+  localStorage.setItem('gullas_loja', lojaSelecionada);
+  document.getElementById('hdr-nome').textContent = nome + ' · ' + nomeLoja(lojaSelecionada);
   mostrarTela('tela-principal');
   carregarCatalogo();
 }
 
 function fazerLogout() {
   localStorage.removeItem('gullas_nome');
+  localStorage.removeItem('gullas_loja');
   nomeFuncionario = "";
+  lojaSelecionada = "LOJA PS";
   selecionados.clear();
   mostrarTela('tela-login');
   document.getElementById('inp-nome').value = '';
+  document.getElementById('inp-loja').value = lojaSelecionada;
 }
 
 // ── Telas ────────────────────────────────────────────────────
@@ -474,7 +489,7 @@ async function enviarVenda() {
 
   btn.textContent = 'ENVIANDO…'; btn.disabled = true;
   try {
-    await post({ action: 'sale', itens, funcionario: nomeFuncionario, data: hojeLocalISO(), obs, imagemBase64: imgB64 });
+    await post({ action: 'sale', itens, funcionario: nomeFuncionario, data: hojeLocalISO(), obs, imagemBase64: imgB64, loja: lojaSelecionada });
     selecionados.clear();
     resetField('v-obs'); resetFile('v-img', 'v-img-prev');
     document.getElementById('basket').classList.remove('show');
@@ -513,7 +528,7 @@ async function enviarSobras() {
 
   btn.textContent = 'ENVIANDO…'; btn.disabled = true;
   try {
-    await post({ action: 'sobra', itens, funcionario: nomeFuncionario, data: hojeLocalISO(), obs, imagemBase64: imgB64 });
+    await post({ action: 'sobra', itens, funcionario: nomeFuncionario, data: hojeLocalISO(), obs, imagemBase64: imgB64, loja: lojaSelecionada });
     resetField('sob-obs'); resetFile('sob-img', 'sob-img-prev');
     catalogo.forEach(it => {
       const el = document.getElementById('si-' + it.id);
@@ -554,7 +569,7 @@ async function fecharCaixaLoja() {
   const btn = document.getElementById('btn-fechar-loja');
   if (btn) { btn.disabled = true; btn.textContent = 'FECHANDO…'; }
   try {
-    const r = await post({ action: 'fechar', funcionario: nomeFuncionario, data });
+    const r = await post({ action: 'fechar', funcionario: nomeFuncionario, data, loja: lojaSelecionada });
     showModalOk('Caixa fechado (' + data + ')!');
   } catch {
     toast('Erro ao fechar caixa');
@@ -662,6 +677,10 @@ function esc(str) {
   return String(str)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function nomeLoja(loja) {
+  return loja === 'LOJA IANDE' ? 'Iande' : 'PS';
 }
 
 // Retorna a data local do dispositivo em yyyy-MM-dd,
