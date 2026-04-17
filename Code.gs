@@ -333,7 +333,7 @@ function actionSetDispatch(d) {
     sh.getRange(startRow, 1, novos.length, ENV_HEADERS.length).setValues(novos);
   }
 
-  return { ok: true, data, itensRegistrados: novos.length };
+  return { ok: true, data };
 }
 
 // ── Fechar Caixa ───────────────────────────────────────────────
