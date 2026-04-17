@@ -162,6 +162,9 @@
     .table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .estufa-modal { max-width: 740px; width: 94%; text-align: left; }
     .estufa-modal .inp { min-width: 80px; }
+    .estufa-loja-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+    .estufa-loja-tabs .btn { padding: 10px 8px; font-size: .8rem; }
+    .estufa-loja-tabs .btn.active { background: #0f172a; color: #fff; }
     .banner-warn { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d;
                    padding: 10px 12px; border-radius: 10px; font-weight: 700;
                    font-size: .85rem; margin-bottom: 10px; text-align: center; }
@@ -241,6 +244,11 @@
       <div class="card-title">Vendas por Data</div>
       <div class="drow">
         <input id="v-data" type="date" class="inp">
+        <select id="v-loja" class="inp" style="max-width:150px;">
+          <option value="GERAL">Geral</option>
+          <option value="LOJA PS">Loja PS</option>
+          <option value="LOJA IANDE">Loja Iande</option>
+        </select>
         <button class="btn btn-primary" onclick="carregarVendas()">🔍</button>
       </div>
       <div id="v-table"><div class="empty">Selecione uma data e clique em 🔍</div></div>
@@ -253,6 +261,11 @@
       <div class="card-title">Sobras por Data</div>
       <div class="drow">
         <input id="s-data" type="date" class="inp">
+        <select id="s-loja" class="inp" style="max-width:150px;">
+          <option value="GERAL">Geral</option>
+          <option value="LOJA PS">Loja PS</option>
+          <option value="LOJA IANDE">Loja Iande</option>
+        </select>
         <button class="btn btn-primary" onclick="carregarSobras()">🔍</button>
       </div>
       <div id="s-table"><div class="empty">Selecione uma data e clique em 🔍</div></div>
@@ -276,6 +289,11 @@
       <div class="card-title">Resumo do Dia</div>
       <div class="drow">
         <input id="r-data" type="date" class="inp">
+        <select id="r-loja" class="inp" style="max-width:150px;">
+          <option value="GERAL">Geral</option>
+          <option value="LOJA PS">Loja PS</option>
+          <option value="LOJA IANDE">Loja Iande</option>
+        </select>
         <button class="btn btn-primary" onclick="carregarResumo()">🔍</button>
       </div>
     </div>
@@ -410,6 +428,11 @@
       <input id="e-data" type="date" class="inp">
       <button class="btn btn-primary" onclick="carregarEstufa()">🔍</button>
     </div>
+    <div class="estufa-loja-tabs">
+      <button id="btn-estufa-loja-geral" class="btn btn-secondary active" onclick="setLojaEstufa('GERAL')">Geral</button>
+      <button id="btn-estufa-loja-ps" class="btn btn-secondary" onclick="setLojaEstufa('LOJA PS')">Loja PS</button>
+      <button id="btn-estufa-loja-iande" class="btn btn-secondary" onclick="setLojaEstufa('LOJA IANDE')">Loja Iande</button>
+    </div>
     <div id="e-table"><div class="empty">Selecione uma data e clique em 🔍</div></div>
     <div style="margin-top:10px;">
       <div class="drow">
@@ -450,6 +473,7 @@ let estufaRows = [];
 let estufaEnviosHistorico = [];
 let estufaVendasHistorico = [];
 let estufaFechado = false;
+let estufaLoja = 'GERAL';
 let estufaPollingTimer = null;
 const ESTUFA_POLL_MS = 10000;
 
@@ -468,6 +492,11 @@ function ativarDashboard() {
   ['v-data', 's-data', 'r-data', 'e-data'].forEach(id => {
     document.getElementById(id).value = hoje;
   });
+  ['v-loja', 's-loja', 'r-loja'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = 'GERAL';
+  });
+  setLojaEstufa('GERAL', true);
   mostrarTela('tela-principal');
   carregarCatalogo();
   atualizarStatusCaixaHeader();
@@ -595,11 +624,12 @@ async function removerItem(id, nome) {
 // ── Vendas ────────────────────────────────────────────────────
 async function carregarVendas() {
   const data = document.getElementById('v-data').value;
+  const loja = document.getElementById('v-loja')?.value || 'GERAL';
   if (!data) { toast('Selecione uma data'); return; }
   const div = document.getElementById('v-table');
   div.innerHTML = '<div class="loading"><div class="spin"></div>Carregando…</div>';
   try {
-    const r = await fetch(SCRIPT_URL + '?action=balance&date=' + data);
+    const r = await fetch(SCRIPT_URL + '?action=balance&date=' + data + '&loja=' + encodeURIComponent(loja));
     const d = await r.json();
     balanceDia = d;
     renderVendas(d.vendas || {});
@@ -645,11 +675,12 @@ function renderVendas(vendas) {
 // ── Sobras ────────────────────────────────────────────────────
 async function carregarSobras() {
   const data = document.getElementById('s-data').value;
+  const loja = document.getElementById('s-loja')?.value || 'GERAL';
   if (!data) { toast('Selecione uma data'); return; }
   const div = document.getElementById('s-table');
   div.innerHTML = '<div class="loading"><div class="spin"></div>Carregando…</div>';
   try {
-    const r = await fetch(SCRIPT_URL + '?action=balance&date=' + data);
+    const r = await fetch(SCRIPT_URL + '?action=balance&date=' + data + '&loja=' + encodeURIComponent(loja));
     const d = await r.json();
     renderSobras(d.sobras || {});
   } catch { div.innerHTML = '<div class="empty">Erro ao carregar</div>'; }
@@ -672,8 +703,34 @@ function renderSobras(sobras) {
 }
 
 // ── Estufa ────────────────────────────────────────────────────
+function nomeLojaExibicao(loja) {
+  if (loja === 'LOJA PS') return 'Loja PS';
+  if (loja === 'LOJA IANDE') return 'Loja Iande';
+  return 'Geral';
+}
+
+function setLojaEstufa(loja, silencioso) {
+  estufaLoja = loja || 'GERAL';
+  const ids = {
+    'GERAL': 'btn-estufa-loja-geral',
+    'LOJA PS': 'btn-estufa-loja-ps',
+    'LOJA IANDE': 'btn-estufa-loja-iande'
+  };
+  Object.values(ids).forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.classList.remove('active');
+  });
+  const ativo = document.getElementById(ids[estufaLoja] || ids['GERAL']);
+  if (ativo) ativo.classList.add('active');
+  if (!silencioso) {
+    const modal = document.getElementById('modal-estufa');
+    if (modal && modal.classList.contains('open')) carregarEstufa();
+  }
+}
+
 function abrirModalEstufa() {
   document.getElementById('modal-estufa').classList.add('open');
+  setLojaEstufa(estufaLoja, true);
   carregarEstufa();
   iniciarPollingEstufa();
 }
@@ -726,7 +783,7 @@ async function carregarEstufa(silencioso) {
 
     const [rc, rr] = await Promise.all([
       fetch(SCRIPT_URL + '?action=catalog'),
-      fetch(SCRIPT_URL + '?action=report&date=' + data)
+      fetch(SCRIPT_URL + '?action=report&date=' + data + '&loja=' + encodeURIComponent(estufaLoja))
     ]);
     const cat = await rc.json();
     const rep = await rr.json();
@@ -772,11 +829,12 @@ async function carregarEstufa(silencioso) {
 
 function renderEstufa() {
   const div = document.getElementById('e-table');
+  const bannerLoja = `<div class="banner-warn" style="background:#e0f2fe;color:#0c4a6e;border-color:#7dd3fc;">📍 Visão atual: <b>${esc(nomeLojaExibicao(estufaLoja))}</b></div>`;
   const bannerFechado = estufaFechado
     ? '<div class="banner-warn">🔒 Caixa fechado — iniciando novo dia (contadores zerados)</div>'
     : '';
   if (!estufaRows.length) {
-    div.innerHTML = bannerFechado + '<div class="empty">Nenhum produto para a data selecionada</div>';
+    div.innerHTML = bannerLoja + bannerFechado + '<div class="empty">Nenhum produto para a data selecionada</div>';
     return;
   }
   const rows = estufaRows.map((r, i) => `
@@ -791,6 +849,7 @@ function renderEstufa() {
   `).join('');
 
   div.innerHTML = `
+    ${bannerLoja}
     ${bannerFechado}
     <div class="table-scroll">
     <table class="tbl">
@@ -815,6 +874,7 @@ function renderHistoricoEnviosEstufa() {
   if (!estufaEnviosHistorico.length) {
     return '<div class="empty" style="margin-top:12px;">Nenhum envio registrado para esta data</div>';
   }
+  const mostrarLoja = estufaLoja === 'GERAL';
   const linhas = estufaEnviosHistorico
     .slice()
     .sort((a, b) => compararTimestampDesc(a.timestamp, b.timestamp))
@@ -823,6 +883,7 @@ function renderHistoricoEnviosEstufa() {
       <td>${esc(r.produto || '')}</td>
       <td class="tr tb">${parseInt(r.qtd) || 0}</td>
       <td>${esc(r.funcionario || 'ADM')}</td>
+      ${mostrarLoja ? `<td>${esc(nomeLojaExibicao(r.loja || 'GERAL'))}</td>` : ''}
     </tr>`).join('');
 
   return `
@@ -831,7 +892,7 @@ function renderHistoricoEnviosEstufa() {
       <div class="table-scroll">
         <table class="tbl">
           <thead>
-            <tr><th>Horário</th><th>Produto</th><th class="tr">Qtd</th><th>Responsável</th></tr>
+            <tr><th>Horário</th><th>Produto</th><th class="tr">Qtd</th><th>Responsável</th>${mostrarLoja ? '<th>Loja</th>' : ''}</tr>
           </thead>
           <tbody>${linhas}</tbody>
         </table>
@@ -847,6 +908,7 @@ function renderHistoricoVendasEstufa() {
         <div class="empty">Nenhuma venda registrada para esta data</div>
       </div>`;
   }
+  const mostrarLoja = estufaLoja === 'GERAL';
   const linhas = estufaVendasHistorico
     .slice()
     .sort((a, b) => compararTimestampDesc(a.timestamp, b.timestamp))
@@ -856,6 +918,7 @@ function renderHistoricoVendasEstufa() {
       <td class="tr tb">${parseInt(r.qtd) || 0}</td>
       <td>${esc(r.funcionario || '')}</td>
       <td>${esc(r.obs || '')}</td>
+      ${mostrarLoja ? `<td>${esc(nomeLojaExibicao(r.loja || 'GERAL'))}</td>` : ''}
     </tr>`).join('');
 
   return `
@@ -864,7 +927,7 @@ function renderHistoricoVendasEstufa() {
       <div class="table-scroll">
         <table class="tbl">
           <thead>
-            <tr><th>Horário</th><th>Produto</th><th class="tr">Qtd</th><th>Atendente</th><th>Obs.</th></tr>
+            <tr><th>Horário</th><th>Produto</th><th class="tr">Qtd</th><th>Atendente</th><th>Obs.</th>${mostrarLoja ? '<th>Loja</th>' : ''}</tr>
           </thead>
           <tbody>${linhas}</tbody>
         </table>
@@ -883,6 +946,8 @@ function recalcularLinhaEstufa(i) {
 async function salvarEnviosEstufa() {
   const data = document.getElementById('e-data').value;
   if (!data) { toast('Selecione uma data'); return; }
+  if (estufaLoja === 'GERAL') { toast('Selecione Loja PS ou Loja Iande para enviar'); return; }
+  if (estufaFechado) { toast('Caixa fechado para esta loja/data. Reabra para enviar.'); return; }
   if (!estufaRows.length) { toast('Nenhum item para salvar'); return; }
   const itens = estufaRows
     .map((r, i) => ({
@@ -892,7 +957,7 @@ async function salvarEnviosEstufa() {
     .filter(i => i.qtd > 0);
   if (!itens.length) { toast('Informe ao menos 1 envio'); return; }
   try {
-    await post({ action: 'setDispatch', data, itens, funcionario: 'ADM' });
+    await post({ action: 'setDispatch', data, itens, funcionario: 'ADM', loja: estufaLoja });
     await carregarEstufa();
     toast('Quantidades enviadas salvas!');
   } catch {
@@ -922,7 +987,7 @@ function enviarSugestaoZap() {
   if (!sugestoes.length && !envios.length) { toast('Informe ao menos 1 item para enviar'); return; }
 
   const data = document.getElementById('e-data').value || '—';
-  let msg = '🧁 *Gullas - Estufa (' + data + ')*\n\n';
+  let msg = '🧁 *Gullas - Estufa (' + data + ' · ' + nomeLojaExibicao(estufaLoja) + ')*\n\n';
 
   // Current status
   msg += '📊 *Status Atual:*\n';
@@ -978,9 +1043,10 @@ function addItemEstufa() {
 // ── Resumo ────────────────────────────────────────────────────
 async function carregarResumo() {
   const data = document.getElementById('r-data').value;
+  const loja = document.getElementById('r-loja')?.value || 'GERAL';
   if (!data) { toast('Selecione uma data'); return; }
   try {
-    const r = await fetch(SCRIPT_URL + '?action=report&date=' + data);
+    const r = await fetch(SCRIPT_URL + '?action=report&date=' + data + '&loja=' + encodeURIComponent(loja));
     balanceDia = await r.json();
     renderResumo(balanceDia);
   } catch { toast('Erro ao carregar resumo'); }
@@ -992,6 +1058,8 @@ function renderResumo(d) {
   const envios = d.envios || {};
   const obs    = d.obs    || [];
   const registrosEnvios = d.registrosEnvios || [];
+  const lojaAtual = d.loja || (document.getElementById('r-loja')?.value || 'GERAL');
+  const mostrarLoja = lojaAtual === 'GERAL';
   const fechado = !!d.fechado;
 
   let fat = 0, nItens = 0;
@@ -1064,11 +1132,12 @@ function renderResumo(d) {
         <td>${esc(r.produto || '')}</td>
         <td class="tr tb">${parseInt(r.qtd) || 0}</td>
         <td>${esc(r.funcionario || 'ADM')}</td>
+        ${mostrarLoja ? `<td>${esc(nomeLojaExibicao(r.loja || 'GERAL'))}</td>` : ''}
       </tr>`).join('');
     document.getElementById('resumo-hist-envios-list').innerHTML = `
       <div class="table-scroll">
       <table class="tbl">
-        <thead><tr><th>Horário</th><th>Produto</th><th class="tr">Qtd</th><th>Responsável</th></tr></thead>
+        <thead><tr><th>Horário</th><th>Produto</th><th class="tr">Qtd</th><th>Responsável</th>${mostrarLoja ? '<th>Loja</th>' : ''}</tr></thead>
         <tbody>${rows}</tbody>
       </table>
       </div>`;
@@ -1081,7 +1150,7 @@ function renderResumo(d) {
     card.style.display = 'block';
     document.getElementById('resumo-obs-list').innerHTML = obs.map(o =>
       `<div class="obs-item">
-         <div class="obs-meta">${esc(o.funcionario || '')} · ${o.tipo}</div>
+         <div class="obs-meta">${esc(o.funcionario || '')} · ${o.tipo}${mostrarLoja ? ' · ' + esc(nomeLojaExibicao(o.loja || 'GERAL')) : ''}</div>
          <div class="obs-txt">${esc(o.obs || '')}</div>
          ${o.imagem ? `<a class="obs-img" href="${o.imagem}" target="_blank">📷 Ver foto</a>` : ''}
        </div>`
@@ -1096,17 +1165,18 @@ function abrirModalFechar() { document.getElementById('modal-fechar').classList.
 
 async function executarFechamento() {
   const data = document.getElementById('r-data').value;
+  const loja = document.getElementById('r-loja')?.value || 'GERAL';
   if (!data) { toast('Selecione uma data no resumo'); return; }
   document.getElementById('modal-fechar').classList.remove('open');
   try {
-    const r = await post({ action: 'fechar', funcionario: 'ADM', data });
+    const r = await post({ action: 'fechar', funcionario: 'ADM', data, loja });
     const msg = MSGS[Math.floor(Math.random() * MSGS.length)];
     const total = (r && typeof r.total === 'number') ? r.total : 0;
     const itensVendidos = (r && r.itensVendidos) || 0;
     const totalSobras = (r && r.totalSobras) || 0;
     const obsCount = (r && r.obsCount) || 0;
 
-    let titulo = 'Caixa fechado (' + data + ')!';
+    let titulo = 'Caixa fechado (' + data + ' · ' + nomeLojaExibicao(loja) + ')!';
     let detalhes = '💰 Faturamento: ' + brl(total) + '\n';
     detalhes += '🛒 Itens vendidos: ' + itensVendidos + '\n';
     detalhes += '📦 Sobras: ' + totalSobras;
@@ -1135,13 +1205,14 @@ function abrirModalReabrir() {
 
 async function executarReabertura() {
   const data = document.getElementById('r-data').value;
+  const loja = document.getElementById('r-loja')?.value || 'GERAL';
   if (!data) { toast('Selecione uma data no resumo'); return; }
   document.getElementById('modal-reabrir').classList.remove('open');
   try {
-    const r = await post({ action: 'reabrir', funcionario: 'ADM', data });
+    const r = await post({ action: 'reabrir', funcionario: 'ADM', data, loja });
     if (r && r.error) { toast('Erro: ' + r.error); return; }
     const reabertos = (r && r.reabertos) || 0;
-    document.getElementById('modal-ok-titulo').textContent = 'Caixa reaberto (' + data + ')!';
+    document.getElementById('modal-ok-titulo').textContent = 'Caixa reaberto (' + data + ' · ' + nomeLojaExibicao(loja) + ')!';
     document.getElementById('modal-ok-msg').textContent =
       'Os envios do dia foram restaurados.' +
       (reabertos ? '\n📤 Registros de envios restaurados: ' + reabertos : '');

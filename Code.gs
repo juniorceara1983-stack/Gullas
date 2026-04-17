@@ -26,13 +26,16 @@ const SHEET_FECHAMENTOS  = 'Fechamentos';
 const CAT_HEADERS = ['id', 'nome', 'preco', 'ativo'];
 const MOV_HEADERS = [
   'timestamp', 'data', 'tipo', 'produto',
-  'qtd', 'preco_unit', 'total', 'funcionario', 'obs', 'imagem_url'
+  'qtd', 'preco_unit', 'total', 'funcionario', 'obs', 'imagem_url', 'loja'
 ];
-const ENV_HEADERS = ['timestamp', 'data', 'produto', 'qtd', 'funcionario'];
+const ENV_HEADERS = ['timestamp', 'data', 'produto', 'qtd', 'funcionario', 'loja'];
 const FECH_HEADERS = [
   'timestamp', 'data', 'funcionario', 'total_venda',
-  'itens_vendidos', 'total_sobras', 'obs_count', 'detalhes_json'
+  'itens_vendidos', 'total_sobras', 'obs_count', 'detalhes_json', 'loja'
 ];
+const LOJA_GERAL = 'GERAL';
+const LOJA_PS = 'LOJA PS';
+const LOJA_IANDE = 'LOJA IANDE';
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -196,6 +199,23 @@ function stampArquivo() {
   return Utilities.formatDate(new Date(), TZ, 'yyyyMMdd_HHmmss');
 }
 
+function normalizaLoja(value) {
+  const s = String(value || '')
+    .trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase();
+  if (!s || s === 'GERAL' || s === 'TODAS' || s === 'TODOS' || s === 'ALL') return LOJA_GERAL;
+  if (s === 'PS' || s === 'LOJA PS' || s === 'LOJAPS') return LOJA_PS;
+  if (s === 'IANDE' || s === 'LOJA IANDE' || s === 'LOJAIANDE') return LOJA_IANDE;
+  return LOJA_GERAL;
+}
+
+function incluiLoja(valorLinha, lojaFiltro) {
+  const filtro = normalizaLoja(lojaFiltro);
+  if (filtro === LOJA_GERAL) return true;
+  return normalizaLoja(valorLinha) === filtro;
+}
+
 function getSheet(name, headers) {
   const ss = getSpreadsheet();
   let sh = ss.getSheetByName(name);
@@ -306,10 +326,10 @@ function doGet(e) {
   try {
     switch (action) {
       case 'catalog': result = actionGetCatalog();                               break;
-      case 'balance': result = actionGetBalance(e.parameter.date);               break;
-      case 'dispatch': result = actionGetDispatch(e.parameter.date);             break;
-      case 'report':  result = actionGetDayReport(e.parameter.date);             break;
-      case 'history': result = actionGetHistory(e.parameter.from, e.parameter.to); break;
+      case 'balance': result = actionGetBalance(e.parameter.date, e.parameter.loja);               break;
+      case 'dispatch': result = actionGetDispatch(e.parameter.date, e.parameter.loja);             break;
+      case 'report':  result = actionGetDayReport(e.parameter.date, e.parameter.loja);             break;
+      case 'history': result = actionGetHistory(e.parameter.from, e.parameter.to, e.parameter.loja); break;
       default:        result = { error: 'acao_desconhecida' };
     }
   } catch (ex) {
@@ -407,6 +427,7 @@ function actionSale(d) {
   const preco = _precoMap();
   const ts    = agora();
   const data  = normalizaDataISO(d.data);
+  const loja  = normalizaLoja(d && d.loja);
   const img   = d.imagemBase64 ? saveImage(d.imagemBase64, 'venda_' + stampArquivo() + '.jpg') : '';
 
   (d.itens || []).forEach(item => {
@@ -414,7 +435,7 @@ function actionSale(d) {
     sh.appendRow([
       ts, data, 'VENDA', item.produto,
       parseInt(item.qtd) || 0, p, p * (parseInt(item.qtd) || 0),
-      d.funcionario || '', d.obs || '', img
+      d.funcionario || '', d.obs || '', img, loja
     ]);
   });
   return { ok: true };
@@ -424,13 +445,14 @@ function actionSobra(d) {
   const sh   = getSheet(SHEET_MOVIMENTOS, MOV_HEADERS);
   const ts   = agora();
   const data = normalizaDataISO(d.data);
+  const loja = normalizaLoja(d && d.loja);
   const img  = d.imagemBase64 ? saveImage(d.imagemBase64, 'sobra_' + stampArquivo() + '.jpg') : '';
 
   (d.itens || []).forEach(item => {
     sh.appendRow([
       ts, data, 'SOBRA', item.produto,
       parseInt(item.qtd) || 0, 0, 0,
-      d.funcionario || '', d.obs || '', img
+      d.funcionario || '', d.obs || '', img, loja
     ]);
   });
   return { ok: true };
@@ -445,8 +467,9 @@ function _precoMap() {
 
 // ── Balance / History ──────────────────────────────────────────
 
-function actionGetBalance(date) {
+function actionGetBalance(date, loja) {
   const data  = normalizaDataISO(date);
+  const filtroLoja = normalizaLoja(loja);
   const rows  = sheetRows(getSheet(SHEET_MOVIMENTOS, MOV_HEADERS));
   const vendas = {};
   const sobras = {};
@@ -456,6 +479,7 @@ function actionGetBalance(date) {
 
   rows.forEach(r => {
     if (dataCelula(r[1]) !== data) return;
+    if (!incluiLoja(r[10], filtroLoja)) return;
     const tipo  = r[2];
     const prod  = String(r[3]);
     const qtd   = parseInt(r[4])   || 0;
@@ -464,36 +488,39 @@ function actionGetBalance(date) {
     const funcionario = String(r[7] || '');
     const obsTxt = String(r[8] || '');
     const img = String(r[9] || '');
+    const lojaLinha = normalizaLoja(r[10]);
     const ts = tsCelula(r[0]);
 
     if (tipo === 'VENDA') {
       if (!vendas[prod]) vendas[prod] = { qtd: 0, preco };
       vendas[prod].qtd += qtd;
       if (!vendas[prod].preco && preco) vendas[prod].preco = preco;
-      registrosVendas.push({ timestamp: ts, produto: prod, qtd, preco, total, funcionario, obs: obsTxt, imagem: img });
+      registrosVendas.push({ timestamp: ts, produto: prod, qtd, preco, total, funcionario, obs: obsTxt, imagem: img, loja: lojaLinha });
     } else if (tipo === 'SOBRA') {
       if (!sobras[prod]) sobras[prod] = 0;
       sobras[prod] += qtd;
-      registrosSobras.push({ timestamp: ts, produto: prod, qtd, funcionario, obs: obsTxt, imagem: img });
+      registrosSobras.push({ timestamp: ts, produto: prod, qtd, funcionario, obs: obsTxt, imagem: img, loja: lojaLinha });
     }
 
     if (obsTxt || img) {
-      obs.push({ tipo, produto: prod, obs: obsTxt, imagem: img, funcionario, ts });
+      obs.push({ tipo, produto: prod, obs: obsTxt, imagem: img, funcionario, ts, loja: lojaLinha });
     }
   });
 
-  return { data, vendas, sobras, obs, registrosVendas, registrosSobras };
+  return { data, loja: filtroLoja, vendas, sobras, obs, registrosVendas, registrosSobras };
 }
 
-function actionGetHistory(from, to) {
+function actionGetHistory(from, to, loja) {
   const rows = sheetRows(getSheet(SHEET_MOVIMENTOS, MOV_HEADERS));
   const dias = {};
+  const filtroLoja = normalizaLoja(loja);
 
   rows.forEach(r => {
     const d = dataCelula(r[1]);
     if (from && d < from) return;
     if (to   && d > to)   return;
     if (!d) return;
+    if (!incluiLoja(r[10], filtroLoja)) return;
     if (!dias[d]) dias[d] = { vendas: {}, sobras: {} };
 
     const tipo  = r[2];
@@ -515,31 +542,36 @@ function actionGetHistory(from, to) {
 
 // ── Envios / Estufa ────────────────────────────────────────────
 
-function actionGetDispatch(date) {
+function actionGetDispatch(date, loja) {
   const data = normalizaDataISO(date);
+  const filtroLoja = normalizaLoja(loja);
   const rows = sheetRows(getSheet(SHEET_ENVIOS, ENV_HEADERS));
   const envios = {};
   const registros = [];
 
   rows.forEach(r => {
     if (dataCelula(r[1]) !== data) return;
+    if (!incluiLoja(r[5], filtroLoja)) return;
     const prod = String(r[2]);
     const qtd  = parseInt(r[3]) || 0;
+    const lojaLinha = normalizaLoja(r[5]);
     if (!envios[prod]) envios[prod] = 0;
     envios[prod] += qtd;
     registros.push({
       timestamp: tsCelula(r[0]),
       produto: prod,
       qtd,
-      funcionario: String(r[4] || '')
+      funcionario: String(r[4] || ''),
+      loja: lojaLinha
     });
   });
 
-  return { data, envios, registros };
+  return { data, loja: filtroLoja, envios, registros };
 }
 
 function actionSetDispatch(d) {
   const data = normalizaDataISO(d.data);
+  const loja = normalizaLoja(d && d.loja);
   const itens = Array.isArray(d.itens) ? d.itens : [];
   const sh = getSheet(SHEET_ENVIOS, ENV_HEADERS);
 
@@ -549,7 +581,7 @@ function actionSetDispatch(d) {
   itens.forEach(item => {
     const qtd = parseInt(item.qtd) || 0;
     if (qtd <= 0) return;
-    novos.push([ts, data, String(item.produto || ''), qtd, funcionario]);
+    novos.push([ts, data, String(item.produto || ''), qtd, funcionario, loja]);
   });
   if (novos.length) {
     const startRow = sh.getLastRow() + 1;
@@ -560,10 +592,13 @@ function actionSetDispatch(d) {
 }
 
 // Verifica se já existe fechamento para a data.
-function isFechado(data) {
+function isFechado(data, loja) {
+  const filtroLoja = normalizaLoja(loja);
   const rows = sheetRows(getSheet(SHEET_FECHAMENTOS, FECH_HEADERS));
   for (let i = 0; i < rows.length; i++) {
-    if (dataCelula(rows[i][1]) === data) return true;
+    if (dataCelula(rows[i][1]) !== data) continue;
+    if (filtroLoja === LOJA_GERAL) return true;
+    if (normalizaLoja(rows[i][8]) === filtroLoja) return true;
   }
   return false;
 }
@@ -571,14 +606,15 @@ function isFechado(data) {
 // Remove todas as linhas de Envios cuja data corresponde à informada.
 // Os registros permanecem preservados dentro do snapshot JSON gravado em
 // Fechamentos (coluna detalhes_json), então o histórico não é perdido.
-function limparEnviosDoDia(data) {
+function limparEnviosDoDia(data, loja) {
+  const filtroLoja = normalizaLoja(loja);
   const sh = getSheet(SHEET_ENVIOS, ENV_HEADERS);
   const lr = sh.getLastRow();
   if (lr < 2) return 0;
   const values = sh.getRange(2, 1, lr - 1, ENV_HEADERS.length).getValues();
   let removed = 0;
   for (let i = values.length - 1; i >= 0; i--) {
-    if (dataCelula(values[i][1]) === data) {
+    if (dataCelula(values[i][1]) === data && incluiLoja(values[i][5], filtroLoja)) {
       sh.deleteRow(i + 2);
       removed++;
     }
@@ -588,13 +624,15 @@ function limparEnviosDoDia(data) {
 
 // ── Relatório unificado do dia ─────────────────────────────────
 
-function actionGetDayReport(date) {
+function actionGetDayReport(date, loja) {
   const data = normalizaDataISO(date);
-  const balance = actionGetBalance(data);
-  const dispatch = actionGetDispatch(data);
-  const fechado = isFechado(data);
+  const filtroLoja = normalizaLoja(loja);
+  const balance = actionGetBalance(data, filtroLoja);
+  const dispatch = actionGetDispatch(data, filtroLoja);
+  const fechado = isFechado(data, filtroLoja);
   return {
     data,
+    loja: filtroLoja,
     vendas: balance.vendas || {},
     sobras: balance.sobras || {},
     obs: balance.obs || [],
@@ -611,8 +649,9 @@ function actionGetDayReport(date) {
 function actionFechar(d) {
   const sh      = getSheet(SHEET_FECHAMENTOS, FECH_HEADERS);
   const data    = normalizaDataISO(d && d.data);
-  const balance = actionGetBalance(data);
-  const dispatch = actionGetDispatch(data);
+  const loja    = normalizaLoja(d && d.loja);
+  const balance = actionGetBalance(data, loja);
+  const dispatch = actionGetDispatch(data, loja);
 
   let total = 0;
   let itensVendidos = 0;
@@ -627,6 +666,7 @@ function actionFechar(d) {
   const obsCount = (balance.obs || []).length;
   const detalhes = {
     data,
+    loja,
     funcionario: (d && d.funcionario) || 'ADM',
     vendas: balance.vendas || {},
     sobras: balance.sobras || {},
@@ -645,16 +685,17 @@ function actionFechar(d) {
     itensVendidos,
     totalSobras,
     obsCount,
-    JSON.stringify(detalhes)
+    JSON.stringify(detalhes),
+    loja
   ]);
 
   // Zera a Estufa do dia: remove linhas de Envios para que o painel volte a
   // zero imediatamente. Os dados permanecem preservados no snapshot JSON
   // gravado acima em Fechamentos.
-  limparEnviosDoDia(data);
+  limparEnviosDoDia(data, loja);
 
   return {
-    ok: true, data, total,
+    ok: true, data, loja, total,
     itensVendidos, totalSobras, obsCount,
     vendas: balance.vendas,
     sobras: balance.sobras,
@@ -672,6 +713,7 @@ function actionFechar(d) {
 // descuido sem iniciar um novo dia. Uso restrito ao painel admin.
 function actionReabrir(d) {
   const data = normalizaDataISO(d && d.data);
+  const loja = normalizaLoja(d && d.loja);
   const sh   = getSheet(SHEET_FECHAMENTOS, FECH_HEADERS);
   const lr   = sh.getLastRow();
   if (lr < 2) {
@@ -684,11 +726,11 @@ function actionReabrir(d) {
   let targetIdx = -1;
   let targetRow = null;
   for (let i = values.length - 1; i >= 0; i--) {
-    if (dataCelula(values[i][1]) === data) {
-      targetIdx = i;
-      targetRow = values[i];
-      break;
-    }
+    if (dataCelula(values[i][1]) !== data) continue;
+    if (loja !== LOJA_GERAL && normalizaLoja(values[i][8]) !== loja) continue;
+    targetIdx = i;
+    targetRow = values[i];
+    break;
   }
   if (targetIdx < 0) {
     return { error: 'nao_fechado: nenhum fechamento encontrado para ' + data };
@@ -697,7 +739,9 @@ function actionReabrir(d) {
   // Restaura envios a partir do snapshot JSON (coluna detalhes_json).
   let restaurados = 0;
   try {
-    const detalhes = JSON.parse(String(targetRow[7] || '{}'));
+    let detalhes = {};
+    const bruto = String(targetRow[7] || '').trim();
+    if (bruto) detalhes = JSON.parse(bruto);
     const registros = Array.isArray(detalhes.envios_registros)
       ? detalhes.envios_registros
       : [];
@@ -708,7 +752,8 @@ function actionReabrir(d) {
         data,
         String((reg && reg.produto) || ''),
         parseInt(reg && reg.qtd) || 0,
-        String((reg && reg.funcionario) || '')
+        String((reg && reg.funcionario) || ''),
+        normalizaLoja((reg && reg.loja) || detalhes.loja || loja)
       ])).filter(row => row[2] && row[3] > 0);
       if (novos.length) {
         const startRow = shEnv.getLastRow() + 1;
@@ -723,10 +768,10 @@ function actionReabrir(d) {
 
   // Remove TODAS as linhas de fechamento para a data (garante estado aberto).
   for (let i = values.length - 1; i >= 0; i--) {
-    if (dataCelula(values[i][1]) === data) {
-      sh.deleteRow(i + 2);
-    }
+    if (dataCelula(values[i][1]) !== data) continue;
+    if (loja !== LOJA_GERAL && normalizaLoja(values[i][8]) !== loja) continue;
+    sh.deleteRow(i + 2);
   }
 
-  return { ok: true, data, reabertos: restaurados, fechado: false };
+  return { ok: true, data, loja, reabertos: restaurados, fechado: false };
 }
