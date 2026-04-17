@@ -59,6 +59,7 @@ A senha digitada na primeira sessão é armazenada localmente no dispositivo do 
 | **Aba Vendas** | Grade de produtos com seleção múltipla; confirmar pedido com quantidades e marcar/desmarcar itens |
 | **Aba Sobras** | Inserir quantidades que sobraram no fim do dia por produto |
 | **Observação + foto** | Campo de texto e upload de imagem (redimensionada automaticamente) em vendas e sobras |
+| **Fechar Caixa (Loja)** | Atendente pode encerrar o caixa do dia pelo próprio painel |
 | **Adicionar produto** | Novo item direto pelo painel; salvo no catálogo central automaticamente |
 | **Modo offline** | Catálogo em cache; envios aguardam conexão |
 

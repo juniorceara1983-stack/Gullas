@@ -38,6 +38,23 @@ function hoje() {
   return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
 }
 
+function agora() {
+  return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm:ss');
+}
+
+function normalizaDataISO(value) {
+  if (!value) return hoje();
+  const s = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return hoje();
+  return Utilities.formatDate(d, TZ, 'yyyy-MM-dd');
+}
+
+function stampArquivo() {
+  return Utilities.formatDate(new Date(), TZ, 'yyyyMMdd_HHmmss');
+}
+
 function getSheet(name, headers) {
   const ss = getSpreadsheet();
   let sh = ss.getSheetByName(name);
@@ -197,9 +214,9 @@ const MOV_HEADERS = [
 function actionSale(d) {
   const sh    = getSheet('Movimentos', MOV_HEADERS);
   const preco = _precoMap();
-  const ts    = new Date().toISOString();
-  const data  = hoje();
-  const img   = d.imagemBase64 ? saveImage(d.imagemBase64, 'venda_' + ts + '.jpg') : '';
+  const ts    = agora();
+  const data  = normalizaDataISO(d.data);
+  const img   = d.imagemBase64 ? saveImage(d.imagemBase64, 'venda_' + stampArquivo() + '.jpg') : '';
 
   (d.itens || []).forEach(item => {
     const p = preco[item.produto] || 0;
@@ -214,9 +231,9 @@ function actionSale(d) {
 
 function actionSobra(d) {
   const sh   = getSheet('Movimentos', MOV_HEADERS);
-  const ts   = new Date().toISOString();
-  const data = hoje();
-  const img  = d.imagemBase64 ? saveImage(d.imagemBase64, 'sobra_' + ts + '.jpg') : '';
+  const ts   = agora();
+  const data = normalizaDataISO(d.data);
+  const img  = d.imagemBase64 ? saveImage(d.imagemBase64, 'sobra_' + stampArquivo() + '.jpg') : '';
 
   (d.itens || []).forEach(item => {
     sh.appendRow([
@@ -238,7 +255,7 @@ function _precoMap() {
 // ── Balance / History ──────────────────────────────────────────
 
 function actionGetBalance(date) {
-  const data  = date || hoje();
+  const data  = normalizaDataISO(date);
   const rows  = sheetRows(getSheet('Movimentos', MOV_HEADERS));
   const vendas = {};
   const sobras = {};
@@ -300,7 +317,7 @@ function actionGetHistory(from, to) {
 const ENV_HEADERS = ['timestamp', 'data', 'produto', 'qtd', 'funcionario'];
 
 function actionGetDispatch(date) {
-  const data = date || hoje();
+  const data = normalizaDataISO(date);
   const rows = sheetRows(getSheet('Envios', ENV_HEADERS));
   const envios = {};
 
@@ -316,11 +333,11 @@ function actionGetDispatch(date) {
 }
 
 function actionSetDispatch(d) {
-  const data = d.data || hoje();
+  const data = normalizaDataISO(d.data);
   const itens = Array.isArray(d.itens) ? d.itens : [];
   const sh = getSheet('Envios', ENV_HEADERS);
 
-  const ts = new Date().toISOString();
+  const ts = agora();
   const funcionario = d.funcionario || 'ADM';
   const novos = [];
   itens.forEach(item => {
@@ -340,10 +357,11 @@ function actionSetDispatch(d) {
 
 function actionFechar(d) {
   const sh      = getSheet('Fechamentos', ['timestamp', 'data', 'funcionario', 'total_venda']);
-  const balance = actionGetBalance(null);
+  const data    = normalizaDataISO(d && d.data);
+  const balance = actionGetBalance(data);
   let total = 0;
   Object.values(balance.vendas).forEach(v => { total += v.qtd * v.preco; });
 
-  sh.appendRow([new Date().toISOString(), hoje(), d.funcionario || 'ADM', total]);
-  return { ok: true, total };
+  sh.appendRow([agora(), data, (d && d.funcionario) || 'ADM', total]);
+  return { ok: true, total, data };
 }

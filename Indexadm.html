@@ -771,17 +771,22 @@ function renderResumo(d) {
 function abrirModalFechar() { document.getElementById('modal-fechar').classList.add('open'); }
 
 async function executarFechamento() {
+  const data = document.getElementById('r-data').value;
+  if (!data) { toast('Selecione uma data no resumo'); return; }
   document.getElementById('modal-fechar').classList.remove('open');
   try {
-    const r   = await post({ action: 'fechar', funcionario: 'ADM' });
+    const r   = await post({ action: 'fechar', funcionario: 'ADM', data });
     const msg = MSGS[Math.floor(Math.random() * MSGS.length)];
-    const total = (balanceDia && balanceDia.vendas)
-      ? Object.values(balanceDia.vendas).reduce((a, v) => a + v.qtd * v.preco, 0)
-      : 0;
+    const total = (r && typeof r.total === 'number')
+      ? r.total
+      : ((balanceDia && balanceDia.vendas)
+          ? Object.values(balanceDia.vendas).reduce((a, v) => a + v.qtd * v.preco, 0)
+          : 0);
     document.getElementById('modal-ok-titulo').textContent =
-      'Caixa fechado! Total: ' + brl(total);
+      'Caixa fechado (' + data + ')! Total: ' + brl(total);
     document.getElementById('modal-ok-msg').textContent = msg;
     document.getElementById('modal-ok').classList.add('open');
+    carregarResumo();
   } catch { toast('Erro ao fechar caixa'); }
 }
 
@@ -835,10 +840,15 @@ function gerarPDF() {
 
 // ── Helpers ───────────────────────────────────────────────────
 async function post(body) {
-  return fetch(SCRIPT_URL, {
-    method: 'POST', mode: 'no-cors',
+  const r = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(body)
   });
+  const txt = await r.text();
+  const data = txt ? JSON.parse(txt) : {};
+  if (data && data.error) throw new Error(data.error);
+  return data;
 }
 
 function brl(n) {
