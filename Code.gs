@@ -19,8 +19,19 @@ const SPREADSHEET_ID = '1Ost4-uHKE7qGh_bKarClUcaSvwUG2nRevORp9FO2rsw';
 // ── Helpers ────────────────────────────────────────────────────
 
 function getSpreadsheet() {
-  if (SPREADSHEET_ID) return SpreadsheetApp.openById(SPREADSHEET_ID);
-  return SpreadsheetApp.getActiveSpreadsheet();
+  if (SPREADSHEET_ID) {
+    try {
+      return SpreadsheetApp.openById(SPREADSHEET_ID);
+    } catch (e) {
+      const active = SpreadsheetApp.getActiveSpreadsheet();
+      if (active) return active;
+      throw new Error('planilha_inacessivel: verifique SPREADSHEET_ID e permissões');
+    }
+  }
+
+  const active = SpreadsheetApp.getActiveSpreadsheet();
+  if (active) return active;
+  throw new Error('planilha_nao_configurada: defina SPREADSHEET_ID ou vincule o script à planilha');
 }
 
 function hoje() {
