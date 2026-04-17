@@ -154,6 +154,9 @@
     .table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .estufa-modal { max-width: 740px; width: 94%; text-align: left; }
     .estufa-modal .inp { min-width: 80px; }
+    .banner-warn { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d;
+                   padding: 10px 12px; border-radius: 10px; font-weight: 700;
+                   font-size: .85rem; margin-bottom: 10px; text-align: center; }
     @media (max-width: 640px) {
       .modal { width: calc(100% - 20px); border-radius: 16px; padding: 16px 12px; }
       .g2 { grid-template-columns: 1fr; }
@@ -269,7 +272,23 @@
         <div class="kpi"><div class="kpi-lbl">🛒 Itens Vendidos</div><div class="kpi-val a" id="kpi-itens">—</div></div>
         <div class="kpi"><div class="kpi-lbl">📦 Sobras Registradas</div><div class="kpi-val" id="kpi-sob">—</div></div>
         <div class="kpi"><div class="kpi-lbl">⚠️ Observações</div><div class="kpi-val" id="kpi-obs">—</div></div>
+        <div class="kpi"><div class="kpi-lbl">📤 Enviado p/ Estufa</div><div class="kpi-val a" id="kpi-env">—</div></div>
+        <div class="kpi"><div class="kpi-lbl">🧺 Restante na Estufa</div><div class="kpi-val" id="kpi-rest">—</div></div>
       </div>
+    </div>
+
+    <div id="resumo-fechado-banner" class="banner-warn" style="display:none;margin:10px 12px;">
+      🔒 Caixa já foi fechado para esta data
+    </div>
+
+    <div id="resumo-envios-card" class="card" style="display:none;">
+      <div class="card-title">📤 Envios do Dia (Estufa)</div>
+      <div id="resumo-envios-list"></div>
+    </div>
+
+    <div id="resumo-hist-envios-card" class="card" style="display:none;">
+      <div class="card-title">Histórico de Envios</div>
+      <div id="resumo-hist-envios-list"></div>
     </div>
 
     <div id="resumo-obs-card" class="card" style="display:none;">
@@ -379,6 +398,10 @@ let catalogo   = [];
 let balanceDia = null;
 let estufaRows = [];
 let estufaEnviosHistorico = [];
+let estufaVendasHistorico = [];
+let estufaFechado = false;
+let estufaPollingTimer = null;
+const ESTUFA_POLL_MS = 10000;
 
 // ── Init ─────────────────────────────────────────────────────
 (function init() {
@@ -601,57 +624,108 @@ function renderSobras(sobras) {
 function abrirModalEstufa() {
   document.getElementById('modal-estufa').classList.add('open');
   carregarEstufa();
+  iniciarPollingEstufa();
 }
 
 function fecharModalEstufa() {
   document.getElementById('modal-estufa').classList.remove('open');
+  pararPollingEstufa();
 }
 
-async function carregarEstufa() {
+function iniciarPollingEstufa() {
+  pararPollingEstufa();
+  estufaPollingTimer = setInterval(() => {
+    const modal = document.getElementById('modal-estufa');
+    if (!modal || !modal.classList.contains('open')) {
+      pararPollingEstufa();
+      return;
+    }
+    carregarEstufa(true);
+  }, ESTUFA_POLL_MS);
+}
+
+function pararPollingEstufa() {
+  if (estufaPollingTimer) {
+    clearInterval(estufaPollingTimer);
+    estufaPollingTimer = null;
+  }
+}
+
+async function carregarEstufa(silencioso) {
   const data = document.getElementById('e-data').value;
-  if (!data) { toast('Selecione uma data'); return; }
+  if (!data) { if (!silencioso) toast('Selecione uma data'); return; }
   const div = document.getElementById('e-table');
-  div.innerHTML = '<div class="loading"><div class="spin"></div>Carregando…</div>';
+  if (!silencioso) {
+    div.innerHTML = '<div class="loading"><div class="spin"></div>Carregando…</div>';
+  }
   try {
-    const [rc, rb, re] = await Promise.all([
+    // Preserva valores que o admin possa ter digitado em "Enviar agora"
+    // antes do refresh, indexados por nome de produto (não por índice, porque
+    // a ordem/lista de produtos pode mudar entre polls).
+    const inputsAtuais = {};
+    if (silencioso && Array.isArray(estufaRows)) {
+      estufaRows.forEach((r, i) => {
+        const el = document.getElementById('env-' + i);
+        if (el) {
+          const v = Math.max(parseInt(el.value) || 0, 0);
+          if (v > 0) inputsAtuais[r.produto] = v;
+        }
+      });
+    }
+
+    const [rc, rr] = await Promise.all([
       fetch(SCRIPT_URL + '?action=catalog'),
-      fetch(SCRIPT_URL + '?action=balance&date=' + data),
-      fetch(SCRIPT_URL + '?action=dispatch&date=' + data)
+      fetch(SCRIPT_URL + '?action=report&date=' + data)
     ]);
     const cat = await rc.json();
-    const bal = await rb.json();
-    const env = await re.json();
+    const rep = await rr.json();
 
     const produtos = new Set();
     (Array.isArray(cat) ? cat : []).forEach(it => produtos.add(String(it.nome)));
-    Object.keys((bal && bal.vendas) || {}).forEach(k => produtos.add(k));
-    Object.keys((env && env.envios) || {}).forEach(k => produtos.add(k));
+    Object.keys((rep && rep.vendas) || {}).forEach(k => produtos.add(k));
+    Object.keys((rep && rep.envios) || {}).forEach(k => produtos.add(k));
 
-    const vendas = (bal && bal.vendas) || {};
-    const envios = (env && env.envios) || {};
-    estufaEnviosHistorico = Array.isArray(env && env.registros) ? env.registros : [];
+    const vendas = (rep && rep.vendas) || {};
+    const envios = (rep && rep.envios) || {};
+    estufaEnviosHistorico = Array.isArray(rep && rep.registrosEnvios) ? rep.registrosEnvios : [];
+    estufaVendasHistorico = Array.isArray(rep && rep.registrosVendas) ? rep.registrosVendas : [];
+    estufaFechado = !!(rep && rep.fechado);
 
     estufaRows = Array.from(produtos)
       .sort((a, b) => a.localeCompare(b, 'pt-BR'))
       .map(prod => {
-        const enviado = parseInt(envios[prod]) || 0;
-        const vendido = parseInt((vendas[prod] && vendas[prod].qtd) || 0);
+        // Se fechado, zera visualmente os contadores do dia.
+        const enviado = estufaFechado ? 0 : (parseInt(envios[prod]) || 0);
+        const vendido = estufaFechado ? 0 : parseInt((vendas[prod] && vendas[prod].qtd) || 0);
         const disponivel = Math.max(enviado - vendido, 0);
         const sugestaoEnvio = Math.max(vendido - enviado, 0);
-        return { produto: prod, enviado, vendido, disponivel, sugestaoEnvio, enviarAgora: 0 };
+        const enviarAgora = inputsAtuais[prod] || 0;
+        return { produto: prod, enviado, vendido, disponivel, sugestaoEnvio, enviarAgora };
       });
+
+    // Quando fechado, esconde históricos do dia (foram snapshotados e zerados).
+    if (estufaFechado) {
+      estufaEnviosHistorico = [];
+      estufaVendasHistorico = [];
+    }
 
     renderEstufa();
   } catch {
-    estufaEnviosHistorico = [];
-    div.innerHTML = '<div class="empty">Erro ao carregar estufa</div>';
+    if (!silencioso) {
+      estufaEnviosHistorico = [];
+      estufaVendasHistorico = [];
+      div.innerHTML = '<div class="empty">Erro ao carregar estufa</div>';
+    }
   }
 }
 
 function renderEstufa() {
   const div = document.getElementById('e-table');
+  const bannerFechado = estufaFechado
+    ? '<div class="banner-warn">🔒 Caixa fechado — iniciando novo dia (contadores zerados)</div>'
+    : '';
   if (!estufaRows.length) {
-    div.innerHTML = '<div class="empty">Nenhum produto para a data selecionada</div>';
+    div.innerHTML = bannerFechado + '<div class="empty">Nenhum produto para a data selecionada</div>';
     return;
   }
   const rows = estufaRows.map((r, i) => `
@@ -666,6 +740,7 @@ function renderEstufa() {
   `).join('');
 
   div.innerHTML = `
+    ${bannerFechado}
     <div class="table-scroll">
     <table class="tbl">
       <thead>
@@ -681,7 +756,8 @@ function renderEstufa() {
       <tbody>${rows}</tbody>
     </table>
     </div>
-    ${renderHistoricoEnviosEstufa()}`;
+    ${renderHistoricoEnviosEstufa()}
+    ${renderHistoricoVendasEstufa()}`;
 }
 
 function renderHistoricoEnviosEstufa() {
@@ -705,6 +781,39 @@ function renderHistoricoEnviosEstufa() {
         <table class="tbl">
           <thead>
             <tr><th>Horário</th><th>Produto</th><th class="tr">Qtd</th><th>Responsável</th></tr>
+          </thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function renderHistoricoVendasEstufa() {
+  if (!estufaVendasHistorico.length) {
+    return `
+      <div class="card" style="margin-top:12px;">
+        <div class="card-title">Histórico de Vendas do Dia</div>
+        <div class="empty">Nenhuma venda registrada para esta data</div>
+      </div>`;
+  }
+  const linhas = estufaVendasHistorico
+    .slice()
+    .sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')))
+    .map(r => `<tr>
+      <td>${esc(r.timestamp || '—')}</td>
+      <td>${esc(r.produto || '')}</td>
+      <td class="tr tb">${parseInt(r.qtd) || 0}</td>
+      <td>${esc(r.funcionario || '')}</td>
+      <td>${esc(r.obs || '')}</td>
+    </tr>`).join('');
+
+  return `
+    <div class="card" style="margin-top:12px;">
+      <div class="card-title">Histórico de Vendas do Dia</div>
+      <div class="table-scroll">
+        <table class="tbl">
+          <thead>
+            <tr><th>Horário</th><th>Produto</th><th class="tr">Qtd</th><th>Atendente</th><th>Obs.</th></tr>
           </thead>
           <tbody>${linhas}</tbody>
         </table>
@@ -820,7 +929,7 @@ async function carregarResumo() {
   const data = document.getElementById('r-data').value;
   if (!data) { toast('Selecione uma data'); return; }
   try {
-    const r = await fetch(SCRIPT_URL + '?action=balance&date=' + data);
+    const r = await fetch(SCRIPT_URL + '?action=report&date=' + data);
     balanceDia = await r.json();
     renderResumo(balanceDia);
   } catch { toast('Erro ao carregar resumo'); }
@@ -829,17 +938,86 @@ async function carregarResumo() {
 function renderResumo(d) {
   const vendas = d.vendas || {};
   const sobras = d.sobras || {};
+  const envios = d.envios || {};
   const obs    = d.obs    || [];
+  const registrosEnvios = d.registrosEnvios || [];
+  const fechado = !!d.fechado;
 
   let fat = 0, nItens = 0;
   Object.values(vendas).forEach(v => { fat += v.qtd * v.preco; nItens += v.qtd; });
 
   const nSobras = Object.values(sobras).reduce((a, b) => a + b, 0);
+  const nEnviado = Object.values(envios).reduce((a, b) => a + (parseInt(b) || 0), 0);
+
+  // Restante = sum max(enviado[p] - vendido[p], 0), por produto
+  let nRestante = 0;
+  Object.keys(envios).forEach(p => {
+    const env = parseInt(envios[p]) || 0;
+    const vend = parseInt((vendas[p] && vendas[p].qtd) || 0);
+    nRestante += Math.max(env - vend, 0);
+  });
 
   document.getElementById('kpi-fat').textContent   = brl(fat);
   document.getElementById('kpi-itens').textContent = nItens;
   document.getElementById('kpi-sob').textContent   = nSobras;
   document.getElementById('kpi-obs').textContent   = obs.length;
+  document.getElementById('kpi-env').textContent   = nEnviado;
+  document.getElementById('kpi-rest').textContent  = nRestante;
+
+  const banner = document.getElementById('resumo-fechado-banner');
+  banner.style.display = fechado ? 'block' : 'none';
+
+  // Card "Envios do dia" (resumo por produto)
+  const cardEnv = document.getElementById('resumo-envios-card');
+  const keysEnv = Object.keys(envios);
+  if (keysEnv.length) {
+    cardEnv.style.display = 'block';
+    const rows = keysEnv
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      .map(k => {
+        const qtd = parseInt(envios[k]) || 0;
+        const vend = parseInt((vendas[k] && vendas[k].qtd) || 0);
+        const rest = Math.max(qtd - vend, 0);
+        return `<tr>
+          <td>${esc(k)}</td>
+          <td class="tr tb">${qtd}</td>
+          <td class="tr">${vend}</td>
+          <td class="tr tb">${rest}</td>
+        </tr>`;
+      }).join('');
+    document.getElementById('resumo-envios-list').innerHTML = `
+      <div class="table-scroll">
+      <table class="tbl">
+        <thead><tr><th>Produto</th><th class="tr">Enviado</th><th class="tr">Vendido</th><th class="tr">Restante</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      </div>`;
+  } else {
+    cardEnv.style.display = 'none';
+  }
+
+  // Card "Histórico de Envios"
+  const cardHist = document.getElementById('resumo-hist-envios-card');
+  if (registrosEnvios.length) {
+    cardHist.style.display = 'block';
+    const rows = registrosEnvios.slice()
+      .sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')))
+      .map(r => `<tr>
+        <td>${esc(r.timestamp || '—')}</td>
+        <td>${esc(r.produto || '')}</td>
+        <td class="tr tb">${parseInt(r.qtd) || 0}</td>
+        <td>${esc(r.funcionario || 'ADM')}</td>
+      </tr>`).join('');
+    document.getElementById('resumo-hist-envios-list').innerHTML = `
+      <div class="table-scroll">
+      <table class="tbl">
+        <thead><tr><th>Horário</th><th>Produto</th><th class="tr">Qtd</th><th>Responsável</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      </div>`;
+  } else {
+    cardHist.style.display = 'none';
+  }
 
   const card = document.getElementById('resumo-obs-card');
   if (obs.length) {
@@ -882,6 +1060,11 @@ async function executarFechamento() {
     document.getElementById('modal-ok-msg').textContent = detalhes;
     document.getElementById('modal-ok').classList.add('open');
     carregarResumo();
+    // Se a Estufa estiver aberta, recarrega para refletir a zeragem.
+    const modalEstufa = document.getElementById('modal-estufa');
+    if (modalEstufa && modalEstufa.classList.contains('open')) {
+      carregarEstufa();
+    }
   } catch { toast('Erro ao fechar caixa'); }
 }
 
@@ -927,6 +1110,25 @@ function gerarPDF() {
       startY: y + 3,
       theme: 'grid',
       headStyles: { fillColor: [100, 116, 139] }
+    });
+  }
+
+  // Envios (Estufa)
+  const eRows = Object.entries(balanceDia.envios || {}).map(([k, v]) => {
+    const vend = parseInt((balanceDia.vendas && balanceDia.vendas[k] && balanceDia.vendas[k].qtd) || 0);
+    const env = parseInt(v) || 0;
+    return [k, env, vend, Math.max(env - vend, 0)];
+  });
+  if (eRows.length) {
+    const y = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 40;
+    doc.setFontSize(11);
+    doc.text('Envios (Estufa)', 14, y);
+    doc.autoTable({
+      head: [['Produto', 'Enviado', 'Vendido', 'Restante']],
+      body: eRows,
+      startY: y + 3,
+      theme: 'grid',
+      headStyles: { fillColor: [14, 165, 233] }
     });
   }
 

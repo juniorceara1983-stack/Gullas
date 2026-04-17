@@ -16,6 +16,13 @@ const TZ = Session.getScriptTimeZone();
 // Em script vinculado à planilha, pode deixar vazio para usar getActiveSpreadsheet().
 const SPREADSHEET_ID = '1Ost4-uHKE7qGh_bKarClUcaSvwUG2nRevORp9FO2rsw';
 
+// Nomes canônicos das abas da planilha. Qualquer variação (acento, caixa,
+// espaços) é detectada por normalização e reaproveitada/renomeada para estes.
+const SHEET_CATALOGO     = 'Catalogo';
+const SHEET_MOVIMENTOS   = 'Movimentos';
+const SHEET_ENVIOS       = 'Envios';
+const SHEET_FECHAMENTOS  = 'Fechamentos';
+
 const CAT_HEADERS = ['id', 'nome', 'preco', 'ativo'];
 const MOV_HEADERS = [
   'timestamp', 'data', 'tipo', 'produto',
@@ -73,10 +80,32 @@ function getSheet(name, headers) {
   const ss = getSpreadsheet();
   let sh = ss.getSheetByName(name);
   if (!sh) {
-    sh = ss.insertSheet(name);
+    // Tolerância a variações: tentar casar por nome normalizado antes de criar
+    // uma aba nova. Isso evita duplicatas quando alguém renomeia a aba para
+    // "Catálogo", "catalogo ", "CATALOGO" etc.
+    const target = normalizeSheetName(name);
+    const all = ss.getSheets();
+    for (let i = 0; i < all.length; i++) {
+      if (normalizeSheetName(all[i].getName()) === target) {
+        sh = all[i];
+        if (sh.getName() !== name) {
+          try { sh.setName(name); } catch (e) { /* outra aba já usa o nome canônico */ }
+        }
+        break;
+      }
+    }
+    if (!sh) sh = ss.insertSheet(name);
   }
   ensureHeaderRow(sh, headers);
   return sh;
+}
+
+function normalizeSheetName(s) {
+  return String(s || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .trim();
 }
 
 function ensureHeaderRow(sh, headers) {
@@ -92,10 +121,10 @@ function ensureHeaderRow(sh, headers) {
 }
 
 function ensureSheetStructure() {
-  getSheet('Catalogo', CAT_HEADERS);
-  getSheet('Movimentos', MOV_HEADERS);
-  getSheet('Envios', ENV_HEADERS);
-  getSheet('Fechamentos', FECH_HEADERS);
+  getSheet(SHEET_CATALOGO, CAT_HEADERS);
+  getSheet(SHEET_MOVIMENTOS, MOV_HEADERS);
+  getSheet(SHEET_ENVIOS, ENV_HEADERS);
+  getSheet(SHEET_FECHAMENTOS, FECH_HEADERS);
 }
 
 function sheetRows(sh) {
@@ -146,6 +175,7 @@ function doGet(e) {
       case 'catalog': result = actionGetCatalog();                               break;
       case 'balance': result = actionGetBalance(e.parameter.date);               break;
       case 'dispatch': result = actionGetDispatch(e.parameter.date);             break;
+      case 'report':  result = actionGetDayReport(e.parameter.date);             break;
       case 'history': result = actionGetHistory(e.parameter.from, e.parameter.to); break;
       default:        result = { error: 'acao_desconhecida' };
     }
@@ -188,7 +218,7 @@ const DEFAULTS    = [
 ];
 
 function actionGetCatalog() {
-  const sh   = getSheet('Catalogo', CAT_HEADERS);
+  const sh   = getSheet(SHEET_CATALOGO, CAT_HEADERS);
   const rows = sheetRows(sh);
 
   if (rows.length === 0) {
@@ -202,7 +232,7 @@ function actionGetCatalog() {
 }
 
 function actionAddItem(d) {
-  const sh   = getSheet('Catalogo', CAT_HEADERS);
+  const sh   = getSheet(SHEET_CATALOGO, CAT_HEADERS);
   const rows = sheetRows(sh);
   const newId = rows.length
     ? Math.max(...rows.map(r => parseInt(r[0]) || 0)) + 1
@@ -212,7 +242,7 @@ function actionAddItem(d) {
 }
 
 function actionUpdateItem(d) {
-  const sh   = getSheet('Catalogo');
+  const sh   = getSheet(SHEET_CATALOGO, CAT_HEADERS);
   const rows = sheetRows(sh);
   for (let i = 0; i < rows.length; i++) {
     if (String(rows[i][0]) === String(d.id)) {
@@ -225,7 +255,7 @@ function actionUpdateItem(d) {
 }
 
 function actionRemoveItem(d) {
-  const sh   = getSheet('Catalogo');
+  const sh   = getSheet(SHEET_CATALOGO, CAT_HEADERS);
   const rows = sheetRows(sh);
   for (let i = 0; i < rows.length; i++) {
     if (String(rows[i][0]) === String(d.id)) {
@@ -239,7 +269,7 @@ function actionRemoveItem(d) {
 // ── Movimentos ─────────────────────────────────────────────────
 
 function actionSale(d) {
-  const sh    = getSheet('Movimentos', MOV_HEADERS);
+  const sh    = getSheet(SHEET_MOVIMENTOS, MOV_HEADERS);
   const preco = _precoMap();
   const ts    = agora();
   const data  = normalizaDataISO(d.data);
@@ -257,7 +287,7 @@ function actionSale(d) {
 }
 
 function actionSobra(d) {
-  const sh   = getSheet('Movimentos', MOV_HEADERS);
+  const sh   = getSheet(SHEET_MOVIMENTOS, MOV_HEADERS);
   const ts   = agora();
   const data = normalizaDataISO(d.data);
   const img  = d.imagemBase64 ? saveImage(d.imagemBase64, 'sobra_' + stampArquivo() + '.jpg') : '';
@@ -273,7 +303,7 @@ function actionSobra(d) {
 }
 
 function _precoMap() {
-  const rows = sheetRows(getSheet('Catalogo', CAT_HEADERS));
+  const rows = sheetRows(getSheet(SHEET_CATALOGO, CAT_HEADERS));
   const map  = {};
   rows.forEach(r => { map[String(r[1])] = parseFloat(r[2]) || 0; });
   return map;
@@ -283,10 +313,12 @@ function _precoMap() {
 
 function actionGetBalance(date) {
   const data  = normalizaDataISO(date);
-  const rows  = sheetRows(getSheet('Movimentos', MOV_HEADERS));
+  const rows  = sheetRows(getSheet(SHEET_MOVIMENTOS, MOV_HEADERS));
   const vendas = {};
   const sobras = {};
   const obs    = [];
+  const registrosVendas = [];
+  const registrosSobras = [];
 
   rows.forEach(r => {
     if (String(r[1]) !== data) return;
@@ -294,26 +326,33 @@ function actionGetBalance(date) {
     const prod  = String(r[3]);
     const qtd   = parseInt(r[4])   || 0;
     const preco = parseFloat(r[5]) || 0;
+    const total = parseFloat(r[6]) || 0;
+    const funcionario = String(r[7] || '');
+    const obsTxt = String(r[8] || '');
+    const img = String(r[9] || '');
+    const ts = String(r[0] || '');
 
     if (tipo === 'VENDA') {
       if (!vendas[prod]) vendas[prod] = { qtd: 0, preco };
       vendas[prod].qtd += qtd;
       if (!vendas[prod].preco && preco) vendas[prod].preco = preco;
+      registrosVendas.push({ timestamp: ts, produto: prod, qtd, preco, total, funcionario, obs: obsTxt, imagem: img });
     } else if (tipo === 'SOBRA') {
       if (!sobras[prod]) sobras[prod] = 0;
       sobras[prod] += qtd;
+      registrosSobras.push({ timestamp: ts, produto: prod, qtd, funcionario, obs: obsTxt, imagem: img });
     }
 
-    if (r[8] || r[9]) {
-      obs.push({ tipo, produto: prod, obs: r[8], imagem: r[9], funcionario: r[7], ts: r[0] });
+    if (obsTxt || img) {
+      obs.push({ tipo, produto: prod, obs: obsTxt, imagem: img, funcionario, ts });
     }
   });
 
-  return { data, vendas, sobras, obs };
+  return { data, vendas, sobras, obs, registrosVendas, registrosSobras };
 }
 
 function actionGetHistory(from, to) {
-  const rows = sheetRows(getSheet('Movimentos', MOV_HEADERS));
+  const rows = sheetRows(getSheet(SHEET_MOVIMENTOS, MOV_HEADERS));
   const dias = {};
 
   rows.forEach(r => {
@@ -343,7 +382,7 @@ function actionGetHistory(from, to) {
 
 function actionGetDispatch(date) {
   const data = normalizaDataISO(date);
-  const rows = sheetRows(getSheet('Envios', ENV_HEADERS));
+  const rows = sheetRows(getSheet(SHEET_ENVIOS, ENV_HEADERS));
   const envios = {};
   const registros = [];
 
@@ -367,7 +406,7 @@ function actionGetDispatch(date) {
 function actionSetDispatch(d) {
   const data = normalizaDataISO(d.data);
   const itens = Array.isArray(d.itens) ? d.itens : [];
-  const sh = getSheet('Envios', ENV_HEADERS);
+  const sh = getSheet(SHEET_ENVIOS, ENV_HEADERS);
 
   const ts = agora();
   const funcionario = d.funcionario || 'ADM';
@@ -385,10 +424,57 @@ function actionSetDispatch(d) {
   return { ok: true, data };
 }
 
+// Verifica se já existe fechamento para a data.
+function isFechado(data) {
+  const rows = sheetRows(getSheet(SHEET_FECHAMENTOS, FECH_HEADERS));
+  for (let i = 0; i < rows.length; i++) {
+    if (String(rows[i][1]) === data) return true;
+  }
+  return false;
+}
+
+// Remove todas as linhas de Envios cuja data corresponde à informada.
+// Os registros permanecem preservados dentro do snapshot JSON gravado em
+// Fechamentos (coluna detalhes_json), então o histórico não é perdido.
+function limparEnviosDoDia(data) {
+  const sh = getSheet(SHEET_ENVIOS, ENV_HEADERS);
+  const lr = sh.getLastRow();
+  if (lr < 2) return 0;
+  const values = sh.getRange(2, 1, lr - 1, ENV_HEADERS.length).getValues();
+  let removed = 0;
+  for (let i = values.length - 1; i >= 0; i--) {
+    if (String(values[i][1]) === data) {
+      sh.deleteRow(i + 2);
+      removed++;
+    }
+  }
+  return removed;
+}
+
+// ── Relatório unificado do dia ─────────────────────────────────
+
+function actionGetDayReport(date) {
+  const data = normalizaDataISO(date);
+  const balance = actionGetBalance(data);
+  const dispatch = actionGetDispatch(data);
+  const fechado = isFechado(data);
+  return {
+    data,
+    vendas: balance.vendas || {},
+    sobras: balance.sobras || {},
+    obs: balance.obs || [],
+    registrosVendas: balance.registrosVendas || [],
+    registrosSobras: balance.registrosSobras || [],
+    envios: dispatch.envios || {},
+    registrosEnvios: dispatch.registros || [],
+    fechado
+  };
+}
+
 // ── Fechar Caixa ───────────────────────────────────────────────
 
 function actionFechar(d) {
-  const sh      = getSheet('Fechamentos', FECH_HEADERS);
+  const sh      = getSheet(SHEET_FECHAMENTOS, FECH_HEADERS);
   const data    = normalizaDataISO(d && d.data);
   const balance = actionGetBalance(data);
   const dispatch = actionGetDispatch(data);
@@ -410,6 +496,8 @@ function actionFechar(d) {
     vendas: balance.vendas || {},
     sobras: balance.sobras || {},
     obs: balance.obs || [],
+    registrosVendas: balance.registrosVendas || [],
+    registrosSobras: balance.registrosSobras || [],
     envios: dispatch.envios || {},
     envios_registros: dispatch.registros || []
   };
@@ -424,6 +512,12 @@ function actionFechar(d) {
     obsCount,
     JSON.stringify(detalhes)
   ]);
+
+  // Zera a Estufa do dia: remove linhas de Envios para que o painel volte a
+  // zero imediatamente. Os dados permanecem preservados no snapshot JSON
+  // gravado acima em Fechamentos.
+  limparEnviosDoDia(data);
+
   return {
     ok: true, data, total,
     itensVendidos, totalSobras, obsCount,
@@ -431,6 +525,7 @@ function actionFechar(d) {
     sobras: balance.sobras,
     obs: balance.obs,
     envios: dispatch.envios,
-    enviosRegistros: dispatch.registros
+    enviosRegistros: dispatch.registros,
+    fechado: true
   };
 }
