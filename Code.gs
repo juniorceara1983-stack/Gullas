@@ -12,15 +12,34 @@
 // ================================================================
 
 const TZ = Session.getScriptTimeZone();
+// Preencha com o ID da planilha quando o script for implantado como projeto standalone.
+// Em script vinculado à planilha, pode deixar vazio para usar getActiveSpreadsheet().
+const SPREADSHEET_ID = '1Ost4-uHKE7qGh_bKarClUcaSvwUG2nRevORp9FO2rsw';
 
 // ── Helpers ────────────────────────────────────────────────────
+
+function getSpreadsheet() {
+  if (SPREADSHEET_ID) {
+    try {
+      return SpreadsheetApp.openById(SPREADSHEET_ID);
+    } catch (e) {
+      const active = SpreadsheetApp.getActiveSpreadsheet();
+      if (active) return active;
+      throw new Error('planilha_inacessivel: verifique SPREADSHEET_ID e permissões');
+    }
+  }
+
+  const active = SpreadsheetApp.getActiveSpreadsheet();
+  if (active) return active;
+  throw new Error('planilha_nao_configurada: defina SPREADSHEET_ID ou vincule o script à planilha');
+}
 
 function hoje() {
   return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
 }
 
 function getSheet(name, headers) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   let sh = ss.getSheetByName(name);
   if (!sh) {
     sh = ss.insertSheet(name);
