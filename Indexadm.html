@@ -643,7 +643,7 @@ function renderEstufa() {
   }
   const rows = estufaRows.map((r, i) => `
     <tr>
-      <td>${esc(r.produto)}</td>
+      <th scope="row">${esc(r.produto)}</th>
       <td class="tr tb">${r.enviado}</td>
       <td class="tr tb">${r.vendido}</td>
       <td class="tr tb" id="disp-${i}">${r.disponivel}</td>
@@ -657,12 +657,12 @@ function renderEstufa() {
     <table class="tbl">
       <thead>
         <tr>
-          <th>Produto</th>
-          <th class="tr">Enviado</th>
-          <th class="tr">Vendido</th>
-          <th class="tr">Disponível</th>
-          <th class="tr">Enviar agora</th>
-          <th class="tr">Sugerir envio (falta)</th>
+          <th scope="col">Produto</th>
+          <th scope="col" class="tr">Enviado</th>
+          <th scope="col" class="tr">Vendido</th>
+          <th scope="col" class="tr">Disponível</th>
+          <th scope="col" class="tr">Enviar agora</th>
+          <th scope="col" class="tr">Sugerir envio (falta)</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
