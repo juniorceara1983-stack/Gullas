@@ -300,8 +300,9 @@
       <div class="card-title">Ações</div>
       <div class="g2">
         <button class="btn btn-success" onclick="gerarPDF()">📄 Exportar PDF</button>
-        <button class="btn btn-danger"  onclick="abrirModalFechar()">🔒 Fechar Caixa</button>
+        <button id="btn-fechar-caixa" class="btn btn-danger"  onclick="abrirModalFechar()">🔒 Fechar Caixa</button>
       </div>
+      <button id="btn-reabrir-caixa" class="btn btn-secondary btn-full mt-10" style="display:none;" onclick="abrirModalReabrir()">🔓 Reabrir Caixa</button>
     </div>
   </div>
 </div>
@@ -320,6 +321,19 @@
     <button class="btn btn-danger btn-full" onclick="executarFechamento()">SIM, FECHAR CAIXA</button>
     <button class="btn btn-secondary btn-full mt-10"
             onclick="document.getElementById('modal-fechar').classList.remove('open')">CANCELAR</button>
+  </div>
+</div>
+
+<!-- Reabrir caixa (apenas admin) -->
+<div id="modal-reabrir" class="modal-bg">
+  <div class="modal">
+    <img src="https://raw.githubusercontent.com/juniorceara1983-stack/Gullas/main/1774954149094.png"
+         class="modal-logo" alt="">
+    <div class="modal-title">Reabrir Caixa?</div>
+    <div class="modal-msg">O fechamento registrado para esta data será desfeito e os envios do dia serão restaurados.<br>Use apenas se o caixa foi fechado por descuido.</div>
+    <button class="btn btn-primary btn-full" onclick="executarReabertura()">SIM, REABRIR CAIXA</button>
+    <button class="btn btn-secondary btn-full mt-10"
+            onclick="document.getElementById('modal-reabrir').classList.remove('open')">CANCELAR</button>
   </div>
 </div>
 
@@ -967,6 +981,12 @@ function renderResumo(d) {
   const banner = document.getElementById('resumo-fechado-banner');
   banner.style.display = fechado ? 'block' : 'none';
 
+  // Mostra o botão de reabrir apenas quando o caixa está fechado.
+  const btnFechar = document.getElementById('btn-fechar-caixa');
+  const btnReabrir = document.getElementById('btn-reabrir-caixa');
+  if (btnFechar)  btnFechar.style.display  = fechado ? 'none' : '';
+  if (btnReabrir) btnReabrir.style.display = fechado ? '' : 'none';
+
   // Card "Envios do dia" (resumo por produto)
   const cardEnv = document.getElementById('resumo-envios-card');
   const keysEnv = Object.keys(envios);
@@ -1066,6 +1086,29 @@ async function executarFechamento() {
       carregarEstufa();
     }
   } catch { toast('Erro ao fechar caixa'); }
+}
+
+function abrirModalReabrir() { document.getElementById('modal-reabrir').classList.add('open'); }
+
+async function executarReabertura() {
+  const data = document.getElementById('r-data').value;
+  if (!data) { toast('Selecione uma data no resumo'); return; }
+  document.getElementById('modal-reabrir').classList.remove('open');
+  try {
+    const r = await post({ action: 'reabrir', funcionario: 'ADM', data });
+    if (r && r.error) { toast('Erro: ' + r.error); return; }
+    const reabertos = (r && r.reabertos) || 0;
+    document.getElementById('modal-ok-titulo').textContent = 'Caixa reaberto (' + data + ')!';
+    document.getElementById('modal-ok-msg').textContent =
+      'Os envios do dia foram restaurados.' +
+      (reabertos ? '\n📤 Registros de envios restaurados: ' + reabertos : '');
+    document.getElementById('modal-ok').classList.add('open');
+    carregarResumo();
+    const modalEstufa = document.getElementById('modal-estufa');
+    if (modalEstufa && modalEstufa.classList.contains('open')) {
+      carregarEstufa();
+    }
+  } catch { toast('Erro ao reabrir caixa'); }
 }
 
 // ── PDF ───────────────────────────────────────────────────────
