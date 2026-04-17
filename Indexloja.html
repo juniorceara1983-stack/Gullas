@@ -636,6 +636,8 @@ function esc(str) {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// Retorna a data local do dispositivo em yyyy-MM-dd,
+// compensando o timezoneOffset antes de gerar o ISO.
 function hojeLocalISO() {
   const now = new Date();
   const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);

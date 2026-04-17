@@ -43,7 +43,7 @@ function agora() {
 }
 
 // Normaliza entradas de data para yyyy-MM-dd.
-// Se a entrada for vazia ou inválida, usa a data atual do fuso do script.
+// Se a entrada for vazia ou inválida, faz fallback silencioso para hoje().
 // Não lança erro para preservar a gravação dos lançamentos.
 function normalizaDataISO(value) {
   if (!value) return hoje();
