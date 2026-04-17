@@ -84,7 +84,7 @@ O Apps Script cria as abas automaticamente na primeira execução:
 | `Catalogo` | id · nome · preco · ativo |
 | `Movimentos` | timestamp · data · tipo · produto · qtd · preco_unit · total · funcionario · obs · imagem_url |
 | `Envios` | timestamp · data · produto · qtd · funcionario |
-| `Fechamentos` | timestamp · data · funcionario · total_venda |
+| `Fechamentos` | timestamp · data · funcionario · total_venda · itens_vendidos · total_sobras · obs_count · detalhes_json |
 
 ---
 
