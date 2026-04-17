@@ -60,20 +60,98 @@ function agora() {
   return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm:ss');
 }
 
+function pad2(n) {
+  const v = parseInt(n, 10);
+  if (Number.isNaN(v) || v < 0) return '00';
+  return v < 10 ? '0' + v : String(v);
+}
+
+function hms(h, m, s) {
+  return pad2(h || 0) + ':' + pad2(m || 0) + ':' + pad2(s || 0);
+}
+
+function isValidYMD(y, m, d) {
+  const yy = parseInt(y, 10);
+  const mm = parseInt(m, 10);
+  const dd = parseInt(d, 10);
+  const invalidNumbers = Number.isNaN(yy) || Number.isNaN(mm) || Number.isNaN(dd);
+  const invalidYear = yy < 0;
+  const invalidMonth = mm < 1 || mm > 12;
+  const invalidDay = dd < 1 || dd > 31;
+  if (invalidNumbers || invalidYear || invalidMonth || invalidDay) return false;
+  const dt = new Date(yy, mm - 1, dd);
+  return dt.getFullYear() === yy && (dt.getMonth() + 1) === mm && dt.getDate() === dd;
+}
+
+function normalizaDataTexto(s) {
+  const txt = String(s || '').trim();
+  if (!txt) return '';
+
+  let m = txt.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/);
+  if (m && isValidYMD(m[1], m[2], m[3])) {
+    return m[1] + '-' + m[2] + '-' + m[3];
+  }
+
+  m = txt.match(/^(\d{4})\/(\d{2})\/(\d{2})(?:[T\s].*)?$/);
+  if (m && isValidYMD(m[1], m[2], m[3])) {
+    return m[1] + '-' + m[2] + '-' + m[3];
+  }
+
+  m = txt.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:[T\s].*)?$/);
+  if (m && isValidYMD(m[3], m[2], m[1])) {
+    return m[3] + '-' + m[2] + '-' + m[1];
+  }
+
+  m = txt.match(/^(\d{2})-(\d{2})-(\d{4})(?:[T\s].*)?$/);
+  if (m && isValidYMD(m[3], m[2], m[1])) {
+    return m[3] + '-' + m[2] + '-' + m[1];
+  }
+
+  return '';
+}
+
+function normalizaTimestampTexto(s) {
+  const txt = String(s || '').trim();
+  if (!txt) return '';
+
+  let m = txt.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (m && isValidYMD(m[1], m[2], m[3])) {
+    return m[1] + '-' + m[2] + '-' + m[3] + ' ' + hms(m[4], m[5], m[6]);
+  }
+
+  m = txt.match(/^(\d{4})\/(\d{2})\/(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (m && isValidYMD(m[1], m[2], m[3])) {
+    return m[1] + '-' + m[2] + '-' + m[3] + ' ' + hms(m[4], m[5], m[6]);
+  }
+
+  m = txt.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (m && isValidYMD(m[3], m[2], m[1])) {
+    return m[3] + '-' + m[2] + '-' + m[1] + ' ' + hms(m[4], m[5], m[6]);
+  }
+
+  m = txt.match(/^(\d{2})-(\d{2})-(\d{4})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (m && isValidYMD(m[3], m[2], m[1])) {
+    return m[3] + '-' + m[2] + '-' + m[1] + ' ' + hms(m[4], m[5], m[6]);
+  }
+
+  return '';
+}
+
 // Normaliza entradas de data para yyyy-MM-dd.
 // Se a entrada for vazia ou inválida, faz fallback silencioso para hoje().
 // Não lança erro para preservar a gravação dos lançamentos.
 function normalizaDataISO(value) {
   if (value === null || value === undefined || value === '') return hoje();
   if (value instanceof Date) {
-    if (isNaN(value.getTime())) return hoje();
+    if (Number.isNaN(value.getTime())) return hoje();
     return Utilities.formatDate(value, TZ, 'yyyy-MM-dd');
   }
   const s = String(value).trim();
   if (!s) return hoje();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const texto = normalizaDataTexto(s);
+  if (texto) return texto;
   const d = new Date(s);
-  if (isNaN(d.getTime())) return hoje();
+  if (Number.isNaN(d.getTime())) return hoje();
   return Utilities.formatDate(d, TZ, 'yyyy-MM-dd');
 }
 
@@ -83,14 +161,15 @@ function normalizaDataISO(value) {
 function dataCelula(value) {
   if (value === null || value === undefined || value === '') return '';
   if (value instanceof Date) {
-    if (isNaN(value.getTime())) return '';
+    if (Number.isNaN(value.getTime())) return '';
     return Utilities.formatDate(value, TZ, 'yyyy-MM-dd');
   }
   const s = String(value).trim();
   if (!s) return '';
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const texto = normalizaDataTexto(s);
+  if (texto) return texto;
   const d = new Date(s);
-  if (isNaN(d.getTime())) return s;
+  if (Number.isNaN(d.getTime())) return s;
   return Utilities.formatDate(d, TZ, 'yyyy-MM-dd');
 }
 
@@ -99,10 +178,18 @@ function dataCelula(value) {
 function tsCelula(value) {
   if (value === null || value === undefined || value === '') return '';
   if (value instanceof Date) {
-    if (isNaN(value.getTime())) return '';
+    if (Number.isNaN(value.getTime())) return '';
     return Utilities.formatDate(value, TZ, 'yyyy-MM-dd HH:mm:ss');
   }
-  return String(value);
+  const s = String(value).trim();
+  if (!s) return '';
+  const texto = normalizaTimestampTexto(s);
+  if (texto) return texto;
+  const d = new Date(s);
+  if (!Number.isNaN(d.getTime())) {
+    return Utilities.formatDate(d, TZ, 'yyyy-MM-dd HH:mm:ss');
+  }
+  return s;
 }
 
 function stampArquivo() {
