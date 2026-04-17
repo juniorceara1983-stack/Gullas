@@ -462,7 +462,7 @@ function abrirConfirmacao() {
          <span class="cfm-name">${esc(it.nome)}</span>
          <div class="qty-ctrl">
             <button class="qty-btn" onclick="dQty(${it.id},-1)">−</button>
-            <input type="number" class="qty-inp" id="qi-${it.id}" value="1" min="1" max="999" oninput="atualizarCupomVenda()" onchange="atualizarCupomVenda()">
+            <input type="number" class="qty-inp" id="qi-${it.id}" value="1" min="1" max="999" oninput="atualizarCupomVenda()">
             <button class="qty-btn" onclick="dQty(${it.id},1)">+</button>
           </div>
         </div>`
