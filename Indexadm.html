@@ -733,27 +733,7 @@ async function salvarEnviosEstufa() {
   if (!itens.length) { toast('Informe ao menos 1 envio'); return; }
   try {
     await post({ action: 'setDispatch', data, itens, funcionario: 'ADM' });
-    const tsFmt = formatTimestampLocal(new Date());
-    itens.forEach(i => {
-      estufaEnviosHistorico.push({
-        timestamp: tsFmt,
-        produto: i.produto,
-        qtd: i.qtd,
-        funcionario: 'ADM'
-      });
-    });
-    estufaRows = estufaRows.map((r, i) => {
-      const enviarAgora = Math.max(parseInt(document.getElementById('env-' + i)?.value) || 0, 0);
-      const enviado = r.enviado + enviarAgora;
-      return {
-        ...r,
-        enviado,
-        enviarAgora: 0,
-        disponivel: Math.max(enviado - r.vendido, 0),
-        sugestaoEnvio: Math.max(r.vendido - enviado, 0)
-      };
-    });
-    renderEstufa();
+    await carregarEstufa();
     toast('Quantidades enviadas salvas!');
   } catch {
     toast('Erro ao salvar enviado');
@@ -999,21 +979,6 @@ function hojeLocalISO() {
   return local.toISOString().slice(0, 10);
 }
 
-function formatTimestampLocal(date) {
-  const base = date instanceof Date ? new Date(date.getTime()) : new Date(date);
-  if (isNaN(base.getTime())) return '';
-  const local = new Date(base.getTime() - base.getTimezoneOffset() * 60000);
-  return local.getUTCFullYear()
-    + '-' + pad2(local.getUTCMonth() + 1)
-    + '-' + pad2(local.getUTCDate())
-    + ' ' + pad2(local.getUTCHours())
-    + ':' + pad2(local.getUTCMinutes())
-    + ':' + pad2(local.getUTCSeconds());
-}
-
-function pad2(n) {
-  return String(n).padStart(2, '0');
-}
 </script>
 </body>
 </html>
