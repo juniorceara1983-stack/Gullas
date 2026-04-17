@@ -745,7 +745,6 @@ function actionReabrir(d) {
     const registros = Array.isArray(detalhes.envios_registros)
       ? detalhes.envios_registros
       : [];
-    limparEnviosDoDia(data, loja);
     if (registros.length) {
       const shEnv = getSheet(SHEET_ENVIOS, ENV_HEADERS);
       const novos = registros.map(reg => ([

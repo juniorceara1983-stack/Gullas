@@ -947,6 +947,7 @@ async function salvarEnviosEstufa() {
   const data = document.getElementById('e-data').value;
   if (!data) { toast('Selecione uma data'); return; }
   if (estufaLoja === 'GERAL') { toast('Selecione Loja PS ou Loja Iande para enviar'); return; }
+  if (estufaFechado) { toast('Caixa fechado para esta loja/data. Reabra para enviar.'); return; }
   if (!estufaRows.length) { toast('Nenhum item para salvar'); return; }
   const itens = estufaRows
     .map((r, i) => ({
