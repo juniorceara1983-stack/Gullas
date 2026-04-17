@@ -64,12 +64,45 @@ function agora() {
 // Se a entrada for vazia ou inválida, faz fallback silencioso para hoje().
 // Não lança erro para preservar a gravação dos lançamentos.
 function normalizaDataISO(value) {
-  if (!value) return hoje();
+  if (value === null || value === undefined || value === '') return hoje();
+  if (value instanceof Date) {
+    if (isNaN(value.getTime())) return hoje();
+    return Utilities.formatDate(value, TZ, 'yyyy-MM-dd');
+  }
   const s = String(value).trim();
+  if (!s) return hoje();
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
   const d = new Date(s);
   if (isNaN(d.getTime())) return hoje();
   return Utilities.formatDate(d, TZ, 'yyyy-MM-dd');
+}
+
+// Converte o valor de uma célula (Date ou string) para yyyy-MM-dd.
+// Diferente de normalizaDataISO(), retorna '' para valores vazios em vez de
+// fazer fallback para hoje(), permitindo filtros exatos por data.
+function dataCelula(value) {
+  if (value === null || value === undefined || value === '') return '';
+  if (value instanceof Date) {
+    if (isNaN(value.getTime())) return '';
+    return Utilities.formatDate(value, TZ, 'yyyy-MM-dd');
+  }
+  const s = String(value).trim();
+  if (!s) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  return Utilities.formatDate(d, TZ, 'yyyy-MM-dd');
+}
+
+// Converte o valor de uma célula (Date ou string) para 'yyyy-MM-dd HH:mm:ss'.
+// Evita que Date objects sejam exibidos no formato verboso padrão do JS.
+function tsCelula(value) {
+  if (value === null || value === undefined || value === '') return '';
+  if (value instanceof Date) {
+    if (isNaN(value.getTime())) return '';
+    return Utilities.formatDate(value, TZ, 'yyyy-MM-dd HH:mm:ss');
+  }
+  return String(value);
 }
 
 function stampArquivo() {
@@ -112,12 +145,25 @@ function ensureHeaderRow(sh, headers) {
   if (!headers || !headers.length) return;
   const cur = sh.getRange(1, 1, 1, headers.length).getValues()[0];
   const mismatch = headers.some((h, i) => String(cur[i] || '') !== String(h));
-  if (!mismatch) return;
+  if (mismatch) {
+    const r = sh.getRange(1, 1, 1, headers.length);
+    r.setValues([headers]);
+    r.setFontWeight('bold').setBackground('#f59e0b').setFontColor('#ffffff');
+    sh.setFrozenRows(1);
+  }
 
-  const r = sh.getRange(1, 1, 1, headers.length);
-  r.setValues([headers]);
-  r.setFontWeight('bold').setBackground('#f59e0b').setFontColor('#ffffff');
-  sh.setFrozenRows(1);
+  // Força formato de texto nas colunas de timestamp/data para impedir que o
+  // Google Sheets coerça strings ISO em objetos Date (o que quebra os filtros
+  // que comparam por yyyy-MM-dd ao ler via getValues()).
+  try {
+    const maxRows = Math.max(sh.getMaxRows(), 2);
+    headers.forEach((h, i) => {
+      const name = String(h || '').toLowerCase();
+      if (name === 'timestamp' || name === 'data') {
+        sh.getRange(2, i + 1, maxRows - 1, 1).setNumberFormat('@');
+      }
+    });
+  } catch (e) { /* formatação é best-effort */ }
 }
 
 function ensureSheetStructure() {
@@ -321,7 +367,7 @@ function actionGetBalance(date) {
   const registrosSobras = [];
 
   rows.forEach(r => {
-    if (String(r[1]) !== data) return;
+    if (dataCelula(r[1]) !== data) return;
     const tipo  = r[2];
     const prod  = String(r[3]);
     const qtd   = parseInt(r[4])   || 0;
@@ -330,7 +376,7 @@ function actionGetBalance(date) {
     const funcionario = String(r[7] || '');
     const obsTxt = String(r[8] || '');
     const img = String(r[9] || '');
-    const ts = String(r[0] || '');
+    const ts = tsCelula(r[0]);
 
     if (tipo === 'VENDA') {
       if (!vendas[prod]) vendas[prod] = { qtd: 0, preco };
@@ -356,9 +402,10 @@ function actionGetHistory(from, to) {
   const dias = {};
 
   rows.forEach(r => {
-    const d = String(r[1]);
+    const d = dataCelula(r[1]);
     if (from && d < from) return;
     if (to   && d > to)   return;
+    if (!d) return;
     if (!dias[d]) dias[d] = { vendas: {}, sobras: {} };
 
     const tipo  = r[2];
@@ -387,13 +434,13 @@ function actionGetDispatch(date) {
   const registros = [];
 
   rows.forEach(r => {
-    if (String(r[1]) !== data) return;
+    if (dataCelula(r[1]) !== data) return;
     const prod = String(r[2]);
     const qtd  = parseInt(r[3]) || 0;
     if (!envios[prod]) envios[prod] = 0;
     envios[prod] += qtd;
     registros.push({
-      timestamp: String(r[0] || ''),
+      timestamp: tsCelula(r[0]),
       produto: prod,
       qtd,
       funcionario: String(r[4] || '')
@@ -428,7 +475,7 @@ function actionSetDispatch(d) {
 function isFechado(data) {
   const rows = sheetRows(getSheet(SHEET_FECHAMENTOS, FECH_HEADERS));
   for (let i = 0; i < rows.length; i++) {
-    if (String(rows[i][1]) === data) return true;
+    if (dataCelula(rows[i][1]) === data) return true;
   }
   return false;
 }
@@ -443,7 +490,7 @@ function limparEnviosDoDia(data) {
   const values = sh.getRange(2, 1, lr - 1, ENV_HEADERS.length).getValues();
   let removed = 0;
   for (let i = values.length - 1; i >= 0; i--) {
-    if (String(values[i][1]) === data) {
+    if (dataCelula(values[i][1]) === data) {
       sh.deleteRow(i + 2);
       removed++;
     }
