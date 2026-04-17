@@ -12,6 +12,8 @@
 // ================================================================
 
 const TZ = Session.getScriptTimeZone();
+// Preencha com o ID da planilha quando o script for implantado como projeto standalone.
+// Em script vinculado à planilha, pode deixar vazio para usar getActiveSpreadsheet().
 const SPREADSHEET_ID = '1Ost4-uHKE7qGh_bKarClUcaSvwUG2nRevORp9FO2rsw';
 
 // ── Helpers ────────────────────────────────────────────────────
