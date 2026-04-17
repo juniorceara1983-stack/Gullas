@@ -378,6 +378,7 @@ const MSGS = [
 let catalogo   = [];
 let balanceDia = null;
 let estufaRows = [];
+let estufaEnviosHistorico = [];
 
 // ── Init ─────────────────────────────────────────────────────
 (function init() {
@@ -628,6 +629,7 @@ async function carregarEstufa() {
 
     const vendas = (bal && bal.vendas) || {};
     const envios = (env && env.envios) || {};
+    estufaEnviosHistorico = Array.isArray(env && env.registros) ? env.registros : [];
 
     estufaRows = Array.from(produtos)
       .sort((a, b) => a.localeCompare(b, 'pt-BR'))
@@ -641,6 +643,7 @@ async function carregarEstufa() {
 
     renderEstufa();
   } catch {
+    estufaEnviosHistorico = [];
     div.innerHTML = '<div class="empty">Erro ao carregar estufa</div>';
   }
 }
@@ -677,6 +680,35 @@ function renderEstufa() {
       </thead>
       <tbody>${rows}</tbody>
     </table>
+    </div>
+    ${renderHistoricoEnviosEstufa()}`;
+}
+
+function renderHistoricoEnviosEstufa() {
+  if (!estufaEnviosHistorico.length) {
+    return '<div class="empty" style="margin-top:12px;">Nenhum envio registrado para esta data</div>';
+  }
+  const linhas = estufaEnviosHistorico
+    .slice()
+    .sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')))
+    .map(r => `<tr>
+      <td>${esc(r.timestamp || '—')}</td>
+      <td>${esc(r.produto || '')}</td>
+      <td class="tr tb">${parseInt(r.qtd) || 0}</td>
+      <td>${esc(r.funcionario || 'ADM')}</td>
+    </tr>`).join('');
+
+  return `
+    <div class="card" style="margin-top:12px;">
+      <div class="card-title">Histórico de Envios do Dia</div>
+      <div class="table-scroll">
+        <table class="tbl">
+          <thead>
+            <tr><th>Horário</th><th>Produto</th><th class="tr">Qtd</th><th>Responsável</th></tr>
+          </thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      </div>
     </div>`;
 }
 
@@ -701,18 +733,7 @@ async function salvarEnviosEstufa() {
   if (!itens.length) { toast('Informe ao menos 1 envio'); return; }
   try {
     await post({ action: 'setDispatch', data, itens, funcionario: 'ADM' });
-    estufaRows = estufaRows.map((r, i) => {
-      const enviarAgora = Math.max(parseInt(document.getElementById('env-' + i)?.value) || 0, 0);
-      const enviado = r.enviado + enviarAgora;
-      return {
-        ...r,
-        enviado,
-        enviarAgora: 0,
-        disponivel: Math.max(enviado - r.vendido, 0),
-        sugestaoEnvio: Math.max(r.vendido - enviado, 0)
-      };
-    });
-    renderEstufa();
+    await carregarEstufa();
     toast('Quantidades enviadas salvas!');
   } catch {
     toast('Erro ao salvar enviado');
@@ -957,6 +978,7 @@ function hojeLocalISO() {
   const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
   return local.toISOString().slice(0, 10);
 }
+
 </script>
 </body>
 </html>
