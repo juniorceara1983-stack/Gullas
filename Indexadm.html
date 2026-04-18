@@ -476,7 +476,7 @@ let estufaVendasHistorico = [];
 let estufaFechado = false;
 let estufaLoja = 'GERAL';
 let estufaCarregando = false;
-let estufaAtualizacaoPendente = null;
+let estufaAtualizacaoPendente = false;
 let estufaSalvando = false;
 
 // ── Init ─────────────────────────────────────────────────────
@@ -742,8 +742,7 @@ function fecharModalEstufa() {
 
 async function carregarEstufa(silencioso) {
   if (estufaCarregando) {
-    const tipo = silencioso ? 'silencioso' : 'manual';
-    if (estufaAtualizacaoPendente !== 'manual') estufaAtualizacaoPendente = tipo;
+    estufaAtualizacaoPendente = true;
     return;
   }
 
@@ -818,9 +817,10 @@ async function carregarEstufa(silencioso) {
     }
   } finally {
     estufaCarregando = false;
-    const pendente = estufaAtualizacaoPendente;
-    estufaAtualizacaoPendente = null;
-    if (pendente) carregarEstufa(pendente === 'silencioso');
+    if (estufaAtualizacaoPendente) {
+      estufaAtualizacaoPendente = false;
+      carregarEstufa(true);
+    }
   }
 }
 
@@ -956,7 +956,7 @@ async function salvarEnviosEstufa() {
   if (!itens.length) { toast('Informe ao menos 1 envio'); return; }
   estufaSalvando = true;
   try {
-    await post({ action: 'setDispatch', data, itens, funcionario: 'ADM', loja: estufaLoja });
+    await salvarItensEnvioEstufa(data, itens);
     await carregarEstufa();
     toast('Quantidades enviadas salvas!');
   } catch {
@@ -993,13 +993,17 @@ async function salvarEEnviarZap() {
     if (!data || data === '—') { toast('Selecione uma data'); return; }
     if (estufaLoja === 'GERAL') { toast('Selecione Loja PS ou Loja Iande para salvar envio'); return; }
     if (estufaFechado) { toast('Caixa fechado para esta loja/data. Reabra para enviar.'); return; }
+    if (estufaSalvando) { toast('Aguarde o salvamento em andamento'); return; }
+    estufaSalvando = true;
     try {
-      await post({ action: 'setDispatch', data, itens: envios, funcionario: 'ADM', loja: estufaLoja });
+      await salvarItensEnvioEstufa(data, envios);
       await carregarEstufa();
       toast('Envio salvo! Abrindo WhatsApp...');
     } catch {
       toast('Erro ao salvar envio antes de abrir o WhatsApp');
       return;
+    } finally {
+      estufaSalvando = false;
     }
   }
 
@@ -1029,6 +1033,10 @@ async function salvarEEnviarZap() {
     // Fallback for popup blockers
     window.location.href = url;
   }
+}
+
+async function salvarItensEnvioEstufa(data, itens) {
+  await post({ action: 'setDispatch', data, itens, funcionario: 'ADM', loja: estufaLoja });
 }
 
 function addItemEstufa() {
