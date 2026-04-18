@@ -427,7 +427,7 @@
     <div class="drow" style="margin-bottom:10px;">
       <input id="e-data" type="date" class="inp">
       <button class="btn btn-primary" onclick="carregarEstufa()">🔍</button>
-      <button class="btn btn-secondary" onclick="carregarEstufa()" aria-label="Atualizar dados da estufa">🔄 ATUALIZAR</button>
+      <button class="btn btn-secondary" onclick="carregarEstufa()">🔄 ATUALIZAR</button>
     </div>
     <div class="estufa-loja-tabs">
       <button id="btn-estufa-loja-geral" class="btn btn-secondary active" onclick="setLojaEstufa('GERAL')">Geral</button>
@@ -443,7 +443,7 @@
     </div>
     <div class="g2 mt-14">
       <button class="btn btn-success" onclick="salvarEnviosEstufa()">💾 SALVAR ENVIADO</button>
-      <button class="btn btn-primary" onclick="enviarSugestaoZap()">📲 ENVIAR P/ ZAP</button>
+      <button class="btn btn-primary" onclick="salvarEEnviarZap()">📲 ENVIAR P/ ZAP</button>
     </div>
     <button class="btn btn-secondary btn-full mt-10" onclick="fecharModalEstufa()">FECHAR</button>
   </div>
@@ -966,7 +966,7 @@ async function salvarEnviosEstufa() {
   }
 }
 
-async function enviarSugestaoZap() {
+async function salvarEEnviarZap() {
   if (!estufaRows.length) { toast('Carregue a estufa primeiro'); return; }
 
   // Collect items from suggestion inputs
