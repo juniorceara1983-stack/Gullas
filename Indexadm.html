@@ -426,7 +426,7 @@
     <div class="modal-title">Painel da Estufa</div>
     <div class="drow" style="margin-bottom:10px;">
       <input id="e-data" type="date" class="inp">
-      <button class="btn btn-primary" onclick="carregarEstufa()">🔍</button>
+      <button class="btn btn-primary" onclick="carregarEstufa()" aria-label="Buscar dados da estufa">🔍</button>
       <button class="btn btn-secondary" onclick="carregarEstufa()" aria-label="Atualizar dados da estufa">🔄 ATUALIZAR</button>
     </div>
     <div class="estufa-loja-tabs">
@@ -999,7 +999,7 @@ async function salvarEEnviarZap() {
       await salvarItensEnvioEstufa(data, envios);
       await carregarEstufa();
     } catch {
-      await carregarEstufa(true);
+      await carregarEstufa();
       toast('Erro ao salvar envio antes de abrir o WhatsApp');
       return;
     } finally {
@@ -1033,9 +1033,11 @@ async function salvarEEnviarZap() {
     // Fallback for popup blockers
     window.location.href = url;
     if (envios.length) toast('Envio salvo! Redirecionando para WhatsApp...');
+    else toast('Redirecionando para WhatsApp...');
     return;
   }
   if (envios.length) toast('Envio salvo! WhatsApp aberto.');
+  else toast('WhatsApp aberto.');
 }
 
 async function salvarItensEnvioEstufa(data, itens) {
