@@ -427,6 +427,7 @@
     <div class="drow" style="margin-bottom:10px;">
       <input id="e-data" type="date" class="inp">
       <button class="btn btn-primary" onclick="carregarEstufa()">🔍</button>
+      <button class="btn btn-secondary" onclick="carregarEstufa()">🔄 ATUALIZAR</button>
     </div>
     <div class="estufa-loja-tabs">
       <button id="btn-estufa-loja-geral" class="btn btn-secondary active" onclick="setLojaEstufa('GERAL')">Geral</button>
@@ -474,8 +475,9 @@ let estufaEnviosHistorico = [];
 let estufaVendasHistorico = [];
 let estufaFechado = false;
 let estufaLoja = 'GERAL';
-let estufaPollingTimer = null;
-const ESTUFA_POLL_MS = 10000;
+let estufaCarregando = false;
+let estufaAtualizacaoPendente = null;
+let estufaSalvando = false;
 
 // ── Init ─────────────────────────────────────────────────────
 (function init() {
@@ -732,36 +734,26 @@ function abrirModalEstufa() {
   document.getElementById('modal-estufa').classList.add('open');
   setLojaEstufa(estufaLoja, true);
   carregarEstufa();
-  iniciarPollingEstufa();
 }
 
 function fecharModalEstufa() {
   document.getElementById('modal-estufa').classList.remove('open');
-  pararPollingEstufa();
-}
-
-function iniciarPollingEstufa() {
-  pararPollingEstufa();
-  estufaPollingTimer = setInterval(() => {
-    const modal = document.getElementById('modal-estufa');
-    if (!modal || !modal.classList.contains('open')) {
-      pararPollingEstufa();
-      return;
-    }
-    carregarEstufa(true);
-  }, ESTUFA_POLL_MS);
-}
-
-function pararPollingEstufa() {
-  if (estufaPollingTimer) {
-    clearInterval(estufaPollingTimer);
-    estufaPollingTimer = null;
-  }
 }
 
 async function carregarEstufa(silencioso) {
+  if (estufaCarregando) {
+    const tipo = silencioso ? 'silenciosa' : 'manual';
+    if (estufaAtualizacaoPendente !== 'manual') estufaAtualizacaoPendente = tipo;
+    return;
+  }
+
+  estufaCarregando = true;
   const data = document.getElementById('e-data').value;
-  if (!data) { if (!silencioso) toast('Selecione uma data'); return; }
+  if (!data) {
+    estufaCarregando = false;
+    if (!silencioso) toast('Selecione uma data');
+    return;
+  }
   const div = document.getElementById('e-table');
   if (!silencioso) {
     div.innerHTML = '<div class="loading"><div class="spin"></div>Carregando…</div>';
@@ -824,6 +816,11 @@ async function carregarEstufa(silencioso) {
       estufaVendasHistorico = [];
       div.innerHTML = '<div class="empty">Erro ao carregar estufa</div>';
     }
+  } finally {
+    estufaCarregando = false;
+    const pendente = estufaAtualizacaoPendente;
+    estufaAtualizacaoPendente = null;
+    if (pendente) carregarEstufa(pendente === 'silenciosa');
   }
 }
 
@@ -944,6 +941,7 @@ function recalcularLinhaEstufa(i) {
 }
 
 async function salvarEnviosEstufa() {
+  if (estufaSalvando) return;
   const data = document.getElementById('e-data').value;
   if (!data) { toast('Selecione uma data'); return; }
   if (estufaLoja === 'GERAL') { toast('Selecione Loja PS ou Loja Iande para enviar'); return; }
@@ -956,16 +954,19 @@ async function salvarEnviosEstufa() {
     }))
     .filter(i => i.qtd > 0);
   if (!itens.length) { toast('Informe ao menos 1 envio'); return; }
+  estufaSalvando = true;
   try {
     await post({ action: 'setDispatch', data, itens, funcionario: 'ADM', loja: estufaLoja });
     await carregarEstufa();
     toast('Quantidades enviadas salvas!');
   } catch {
     toast('Erro ao salvar enviado');
+  } finally {
+    estufaSalvando = false;
   }
 }
 
-function enviarSugestaoZap() {
+async function enviarSugestaoZap() {
   if (!estufaRows.length) { toast('Carregue a estufa primeiro'); return; }
 
   // Collect items from suggestion inputs
@@ -987,6 +988,21 @@ function enviarSugestaoZap() {
   if (!sugestoes.length && !envios.length) { toast('Informe ao menos 1 item para enviar'); return; }
 
   const data = document.getElementById('e-data').value || '—';
+
+  if (envios.length) {
+    if (!data || data === '—') { toast('Selecione uma data'); return; }
+    if (estufaLoja === 'GERAL') { toast('Selecione Loja PS ou Loja Iande para salvar envio'); return; }
+    if (estufaFechado) { toast('Caixa fechado para esta loja/data. Reabra para enviar.'); return; }
+    try {
+      await post({ action: 'setDispatch', data, itens: envios, funcionario: 'ADM', loja: estufaLoja });
+      await carregarEstufa();
+      toast('Envio salvo! Abrindo WhatsApp…');
+    } catch {
+      toast('Erro ao salvar envio antes de abrir o WhatsApp');
+      return;
+    }
+  }
+
   let msg = '🧁 *Gullas - Estufa (' + data + ' · ' + nomeLojaExibicao(estufaLoja) + ')*\n\n';
 
   // Current status
