@@ -427,7 +427,7 @@
     <div class="drow" style="margin-bottom:10px;">
       <input id="e-data" type="date" class="inp">
       <button class="btn btn-primary" onclick="carregarEstufa()">🔍</button>
-      <button class="btn btn-secondary" onclick="carregarEstufa()" aria-label="Atualizar estufa">🔄 ATUALIZAR</button>
+      <button class="btn btn-secondary" onclick="carregarEstufa()" aria-label="Atualizar dados da estufa">🔄 ATUALIZAR</button>
     </div>
     <div class="estufa-loja-tabs">
       <button id="btn-estufa-loja-geral" class="btn btn-secondary active" onclick="setLojaEstufa('GERAL')">Geral</button>
@@ -996,7 +996,7 @@ async function enviarSugestaoZap() {
     try {
       await post({ action: 'setDispatch', data, itens: envios, funcionario: 'ADM', loja: estufaLoja });
       await carregarEstufa();
-      toast('Envio salvo! Abrindo WhatsApp…');
+      toast('Envio salvo! Abrindo WhatsApp...');
     } catch {
       toast('Erro ao salvar envio antes de abrir o WhatsApp');
       return;
