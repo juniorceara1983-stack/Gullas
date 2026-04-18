@@ -427,7 +427,7 @@
     <div class="drow" style="margin-bottom:10px;">
       <input id="e-data" type="date" class="inp">
       <button class="btn btn-primary" onclick="carregarEstufa()">🔍</button>
-      <button class="btn btn-secondary" onclick="carregarEstufa()">🔄 ATUALIZAR</button>
+      <button class="btn btn-secondary" onclick="carregarEstufa()" aria-label="Atualizar estufa">🔄 ATUALIZAR</button>
     </div>
     <div class="estufa-loja-tabs">
       <button id="btn-estufa-loja-geral" class="btn btn-secondary active" onclick="setLojaEstufa('GERAL')">Geral</button>
@@ -742,7 +742,7 @@ function fecharModalEstufa() {
 
 async function carregarEstufa(silencioso) {
   if (estufaCarregando) {
-    const tipo = silencioso ? 'silenciosa' : 'manual';
+    const tipo = silencioso ? 'silencioso' : 'manual';
     if (estufaAtualizacaoPendente !== 'manual') estufaAtualizacaoPendente = tipo;
     return;
   }
@@ -820,7 +820,7 @@ async function carregarEstufa(silencioso) {
     estufaCarregando = false;
     const pendente = estufaAtualizacaoPendente;
     estufaAtualizacaoPendente = null;
-    if (pendente) carregarEstufa(pendente === 'silenciosa');
+    if (pendente) carregarEstufa(pendente === 'silencioso');
   }
 }
 
