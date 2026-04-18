@@ -427,7 +427,7 @@
     <div class="drow" style="margin-bottom:10px;">
       <input id="e-data" type="date" class="inp">
       <button class="btn btn-primary" onclick="carregarEstufa()" aria-label="Buscar dados da estufa">🔍</button>
-      <button class="btn btn-secondary" onclick="carregarEstufa()" aria-label="Atualizar dados da estufa">🔄 ATUALIZAR</button>
+      <button class="btn btn-secondary" onclick="carregarEstufa(true)" aria-label="Atualizar dados da estufa">🔄 ATUALIZAR</button>
     </div>
     <div class="estufa-loja-tabs">
       <button id="btn-estufa-loja-geral" class="btn btn-secondary active" onclick="setLojaEstufa('GERAL')">Geral</button>
@@ -997,12 +997,11 @@ async function salvarEEnviarZap() {
     estufaSalvando = true;
     try {
       await salvarItensEnvioEstufa(data, envios);
-      await carregarEstufa();
     } catch {
-      await carregarEstufa();
       toast('Erro ao salvar envio antes de abrir o WhatsApp');
       return;
     } finally {
+      await carregarEstufa();
       estufaSalvando = false;
     }
   }
