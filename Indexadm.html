@@ -998,7 +998,6 @@ async function salvarEEnviarZap() {
     try {
       await salvarItensEnvioEstufa(data, envios);
       await carregarEstufa();
-      toast('Envio salvo! Abrindo WhatsApp...');
     } catch {
       toast('Erro ao salvar envio antes de abrir o WhatsApp');
       return;
@@ -1032,7 +1031,10 @@ async function salvarEEnviarZap() {
   if (!win) {
     // Fallback for popup blockers
     window.location.href = url;
+    if (envios.length) toast('Envio salvo! Redirecionando para WhatsApp...');
+    return;
   }
+  if (envios.length) toast('Envio salvo! WhatsApp aberto.');
 }
 
 async function salvarItensEnvioEstufa(data, itens) {
