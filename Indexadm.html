@@ -977,7 +977,7 @@ async function salvarEEnviarZap() {
     }))
     .filter(i => i.qtd > 0);
 
-  if (!envios.length) { toast('Informe ao menos 1 nova quantidade em "Enviar agora"'); return; }
+  if (!envios.length) { toast('Informe pelo menos 1 nova quantidade em "Enviar agora"'); return; }
 
   const data = document.getElementById('e-data').value || '—';
 
