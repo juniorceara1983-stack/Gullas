@@ -342,6 +342,7 @@ let catalogo = [];       // [{id, nome, preco}]
 let vendasAbertas = [];   // [{id, cliente, itens:[{id,nome,preco,qtd}], obs}]
 let vendaAtivaId = null;
 let itensSelecionadosRemocao = new Set();
+let enviandoVenda = false;
 const SALES_KEY = 'gullas_vendas_abertas_v1';
 const SALES_SEQ_KEY = 'gullas_vendas_seq_v1';
 const SALES_CLIENT_KEY = 'gullas_vendas_cliente_seq_v1';
@@ -617,8 +618,8 @@ function renderConsumoAtual() {
   }
 
   obsEl.value = venda.obs || '';
-  btn.disabled = !(venda.itens && venda.itens.length);
-  btn.textContent = '💰 Finalizar e pago';
+  btn.disabled = enviandoVenda || !(venda.itens && venda.itens.length);
+  btn.textContent = enviandoVenda ? 'ENVIANDO PAGO…' : '💰 Finalizar e pago';
 
   if (!(venda.itens || []).length) {
     list.innerHTML = '<div class="empty">Clique nos itens acima para registrar o consumo</div>';
@@ -629,7 +630,7 @@ function renderConsumoAtual() {
 
   list.innerHTML = venda.itens.map(i => `
     <div class="cons-item">
-      <input type="checkbox" class="cfm-chk" data-id="${esc(i.id)}" onchange="marcarItemRemocao(this.dataset.id, this.checked)">
+      <input type="checkbox" class="cfm-chk" data-id="${esc(i.id)}" ${itensSelecionadosRemocao.has(String(i.id)) ? 'checked' : ''} onchange="marcarItemRemocao(this.dataset.id, this.checked)">
       <span class="cons-item-name">${esc(i.nome)}</span>
       <div class="qty-ctrl">
         <button class="qty-btn" data-id="${esc(i.id)}" onclick="alterarQtdItem(this.dataset.id, -1)">−</button>
@@ -707,6 +708,7 @@ async function finalizarVendaPaga() {
   const obs = venda.obs || '';
   const imgB64 = await imgBase64('v-img');
 
+  enviandoVenda = true;
   btn.textContent = 'ENVIANDO PAGO…'; btn.disabled = true;
   try {
     await post({ action: 'sale', itens, funcionario: nomeFuncionario, data: hojeLocalISO(), obs, imagemBase64: imgB64, loja: lojaSelecionada });
@@ -723,6 +725,9 @@ async function finalizarVendaPaga() {
   } catch {
     toast('Erro ao enviar. Verifique a conexão.');
     btn.textContent = '💰 Finalizar e pago'; btn.disabled = false;
+  } finally {
+    enviandoVenda = false;
+    renderConsumoAtual();
   }
 }
 
