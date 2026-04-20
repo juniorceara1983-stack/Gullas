@@ -339,6 +339,7 @@ let vendaAtivaId = null;
 let itensSelecionadosRemocao = new Set();
 const SALES_KEY = 'gullas_vendas_abertas_v1';
 const SALES_SEQ_KEY = 'gullas_vendas_seq_v1';
+const SALES_CLIENT_KEY = 'gullas_vendas_cliente_seq_v1';
 
 // ── Init ─────────────────────────────────────────────────────
 (function init() {
@@ -496,14 +497,21 @@ function gerarIdVenda() {
   const atual = parseInt(localStorage.getItem(SALES_SEQ_KEY) || '0', 10) || 0;
   const proximo = atual + 1;
   localStorage.setItem(SALES_SEQ_KEY, String(proximo));
-  return 'v' + Date.now() + '_' + proximo;
+  return 'v' + Date.now() + '_' + proximo + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+function proximoNomeCliente() {
+  const atual = parseInt(localStorage.getItem(SALES_CLIENT_KEY) || '0', 10) || 0;
+  const proximo = atual + 1;
+  localStorage.setItem(SALES_CLIENT_KEY, String(proximo));
+  return 'Cliente ' + proximo;
 }
 
 function criarNovaVenda(mostrarToast = true) {
   const id = gerarIdVenda();
   vendasAbertas.push({
     id,
-    cliente: 'Cliente ' + (vendasAbertas.length + 1),
+    cliente: proximoNomeCliente(),
     itens: [],
     obs: ''
   });
@@ -546,7 +554,7 @@ function adicionarItemVenda(itemId) {
     item = { id: cat.id, nome: cat.nome, preco: parseFloat(cat.preco) || 0, qtd: 0 };
     venda.itens.push(item);
   }
-  item.qtd = Math.max(1, (parseInt(item.qtd, 10) || 0) + 1);
+  item.qtd = (parseInt(item.qtd, 10) || 0) + 1;
   salvarVendasAbertas();
   renderVendasAbertas();
   renderGrid();
@@ -578,7 +586,10 @@ function editarQtdItem(itemId, value) {
 }
 
 function marcarItemRemocao(itemId, on) {
+  const venda = getVendaAtiva();
+  if (!venda) return;
   const id = String(itemId);
+  if (!(venda.itens || []).some(i => String(i.id) === id)) return;
   if (on) itensSelecionadosRemocao.add(id);
   else itensSelecionadosRemocao.delete(id);
 }
