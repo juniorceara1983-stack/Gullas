@@ -56,7 +56,7 @@ A senha digitada na primeira sessão é armazenada localmente no dispositivo do 
 ### Painel da Atendente (`Indexloja.html`)
 | Funcionalidade | Descrição |
 |---|---|
-| **Aba Vendas** | Grade de produtos com seleção múltipla; confirmar pedido com quantidades e marcar/desmarcar itens |
+| **Aba Vendas** | Comandas múltiplas em aberto por cliente (persistidas no dispositivo), consumo por clique rápido nos itens, cupom em tempo real e ações de excluir/refazer/retirar itens/finalizar pago |
 | **Aba Sobras** | Inserir quantidades que sobraram no fim do dia por produto |
 | **Observação + foto** | Campo de texto e upload de imagem (redimensionada automaticamente) em vendas e sobras |
 | **Fechar Caixa (Loja)** | Atendente pode encerrar o caixa do dia pelo próprio painel |
