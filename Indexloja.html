@@ -338,6 +338,7 @@ let vendasAbertas = [];   // [{id, cliente, itens:[{id,nome,preco,qtd}], obs}]
 let vendaAtivaId = null;
 let itensSelecionadosRemocao = new Set();
 const SALES_KEY = 'gullas_vendas_abertas_v1';
+const SALES_SEQ_KEY = 'gullas_vendas_seq_v1';
 
 // ── Init ─────────────────────────────────────────────────────
 (function init() {
@@ -465,8 +466,8 @@ function carregarVendasAbertas() {
             : []
         }))
       : [];
-  } catch {
-    console.warn('Falha ao carregar vendas em aberto do storage local.');
+  } catch (err) {
+    console.warn('Falha ao carregar vendas em aberto do storage local.', err);
     vendasAbertas = [];
   }
   if (!vendasAbertas.length) {
@@ -490,10 +491,16 @@ function qtdItemNaVenda(venda, itemId) {
   return it ? (parseInt(it.qtd, 10) || 0) : 0;
 }
 
+function gerarIdVenda() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  const atual = parseInt(localStorage.getItem(SALES_SEQ_KEY) || '0', 10) || 0;
+  const proximo = atual + 1;
+  localStorage.setItem(SALES_SEQ_KEY, String(proximo));
+  return 'v' + Date.now() + '_' + proximo;
+}
+
 function criarNovaVenda(mostrarToast = true) {
-  const id = (typeof crypto !== 'undefined' && crypto.randomUUID)
-    ? crypto.randomUUID()
-    : (String(Date.now()) + '_' + Math.floor(Math.random() * 1000000));
+  const id = gerarIdVenda();
   vendasAbertas.push({
     id,
     cliente: 'Cliente ' + (vendasAbertas.length + 1),
@@ -510,7 +517,7 @@ function criarNovaVenda(mostrarToast = true) {
 }
 
 function selecionarVenda(id) {
-  const vid = String(id);
+  const vid = id;
   if (!vendasAbertas.some(v => v.id === vid)) return;
   vendaAtivaId = vid;
   itensSelecionadosRemocao.clear();
