@@ -491,7 +491,9 @@ function qtdItemNaVenda(venda, itemId) {
 }
 
 function criarNovaVenda(mostrarToast = true) {
-  const id = String(Date.now()) + '_' + Math.floor(Math.random() * 10000);
+  const id = (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : (String(Date.now()) + '_' + Math.floor(Math.random() * 1000000));
   vendasAbertas.push({
     id,
     cliente: 'Cliente ' + (vendasAbertas.length + 1),
