@@ -251,6 +251,11 @@
       </div>
       <div class="sec-title mt-14">Observação (opcional)</div>
       <textarea id="v-obs" class="inp" rows="3" placeholder="Alguma observação sobre a venda…" style="resize:none;"></textarea>
+      <label class="upload-lbl">
+        📷 Foto de produto danificado / vencido
+        <input type="file" id="v-img" accept="image/*" capture="environment" style="display:none;" onchange="prevImg(this,'v-img-prev')">
+      </label>
+      <img id="v-img-prev" class="img-prev" alt="">
       <div class="cons-actions">
         <button class="btn btn-danger" onclick="excluirVendaAtiva()">🗑 Excluir</button>
         <button class="btn btn-ghost" onclick="refazerVendaAtiva()">🔄 Refazer</button>
@@ -493,7 +498,7 @@ function qtdItemNaVenda(venda, itemId) {
 }
 
 function gerarIdVenda() {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
   const atual = parseInt(localStorage.getItem(SALES_SEQ_KEY) || '0', 10) || 0;
   const proximo = atual + 1;
   localStorage.setItem(SALES_SEQ_KEY, String(proximo));
@@ -525,9 +530,8 @@ function criarNovaVenda(mostrarToast = true) {
 }
 
 function selecionarVenda(id) {
-  const vid = id;
-  if (!vendasAbertas.some(v => v.id === vid)) return;
-  vendaAtivaId = vid;
+  if (!vendasAbertas.some(v => v.id === id)) return;
+  vendaAtivaId = id;
   itensSelecionadosRemocao.clear();
   renderVendasAbertas();
   renderGrid();
@@ -701,15 +705,17 @@ async function finalizarVendaPaga() {
   if (!itens.length) { toast('Nenhum item marcado'); return; }
 
   const obs = venda.obs || '';
+  const imgB64 = await imgBase64('v-img');
 
   btn.textContent = 'ENVIANDO PAGO…'; btn.disabled = true;
   try {
-    await post({ action: 'sale', itens, funcionario: nomeFuncionario, data: hojeLocalISO(), obs, loja: lojaSelecionada });
+    await post({ action: 'sale', itens, funcionario: nomeFuncionario, data: hojeLocalISO(), obs, imagemBase64: imgB64, loja: lojaSelecionada });
     vendasAbertas = vendasAbertas.filter(v => v.id !== venda.id);
     if (!vendasAbertas.length) criarNovaVenda(false);
     vendaAtivaId = vendasAbertas[0].id;
     itensSelecionadosRemocao.clear();
     salvarVendasAbertas();
+    resetFile('v-img', 'v-img-prev');
     renderVendasAbertas();
     renderGrid();
     renderConsumoAtual();
