@@ -466,6 +466,7 @@ function carregarVendasAbertas() {
         }))
       : [];
   } catch {
+    console.warn('Falha ao carregar vendas em aberto do storage local.');
     vendasAbertas = [];
   }
   if (!vendasAbertas.length) {
@@ -522,7 +523,7 @@ function renderVendasAbertas() {
   if (!vendasAbertas.length) criarNovaVenda(false);
   el.innerHTML = vendasAbertas.map(v => {
     const qtd = (v.itens || []).reduce((acc, i) => acc + (parseInt(i.qtd, 10) || 0), 0);
-    return `<button class="sale-chip${v.id === vendaAtivaId ? ' active' : ''}" onclick="selecionarVenda('${esc(v.id)}')">${esc(v.cliente)} (${qtd})</button>`;
+    return `<button class="sale-chip${v.id === vendaAtivaId ? ' active' : ''}" data-id="${esc(v.id)}" onclick="selecionarVenda(this.dataset.id)">${esc(v.cliente)} (${qtd})</button>`;
   }).join('') + '<button class="sale-chip sale-chip-new" onclick="criarNovaVenda()">+ Nova venda</button>';
 }
 
@@ -604,12 +605,12 @@ function renderConsumoAtual() {
 
   list.innerHTML = venda.itens.map(i => `
     <div class="cons-item">
-      <input type="checkbox" class="cfm-chk" onchange="marcarItemRemocao('${esc(i.id)}', this.checked)">
+      <input type="checkbox" class="cfm-chk" data-id="${esc(i.id)}" onchange="marcarItemRemocao(this.dataset.id, this.checked)">
       <span class="cons-item-name">${esc(i.nome)}</span>
       <div class="qty-ctrl">
-        <button class="qty-btn" onclick="alterarQtdItem('${esc(i.id)}', -1)">−</button>
-        <input type="number" class="qty-inp" value="${parseInt(i.qtd, 10) || 1}" min="1" max="999" oninput="editarQtdItem('${esc(i.id)}', this.value)">
-        <button class="qty-btn" onclick="alterarQtdItem('${esc(i.id)}', 1)">+</button>
+        <button class="qty-btn" data-id="${esc(i.id)}" onclick="alterarQtdItem(this.dataset.id, -1)">−</button>
+        <input type="number" class="qty-inp" data-id="${esc(i.id)}" value="${parseInt(i.qtd, 10) || 1}" min="1" max="999" oninput="editarQtdItem(this.dataset.id, this.value)">
+        <button class="qty-btn" data-id="${esc(i.id)}" onclick="alterarQtdItem(this.dataset.id, 1)">+</button>
       </div>
       <span class="cons-item-sub">${brl((parseFloat(i.preco) || 0) * (parseInt(i.qtd, 10) || 0))}</span>
     </div>
