@@ -79,6 +79,19 @@
     .btn-add-prod { width: 100%; margin-top: 12px; padding: 12px; background: #f1f5f9;
                     border: 2px dashed var(--border); border-radius: var(--r); color: var(--muted);
                     font-size: .85rem; font-weight: 600; cursor: pointer; }
+    .sale-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 10px; }
+    .sale-chip { border: 2px solid var(--border); background: white; color: var(--text); border-radius: 999px;
+                 padding: 8px 12px; font-size: .8rem; font-weight: 700; white-space: nowrap; cursor: pointer; }
+    .sale-chip.active { border-color: var(--primary); color: var(--primary); background: #fffbeb; }
+    .sale-chip-new { border-style: dashed; color: var(--muted); }
+    .consumo-list { margin-top: 10px; }
+    .cons-item { background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+                 padding: 10px; display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .cons-item-name { flex: 1; font-size: .86rem; font-weight: 600; }
+    .cons-item-sub { font-size: .8rem; color: var(--muted); min-width: 80px; text-align: right; }
+    .cons-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .cons-actions .btn { font-size: .84rem; padding: 11px 8px; }
+    .prod-badge { margin-top: 6px; font-size: .72rem; color: var(--primary); font-weight: 800; }
 
     /* ── Basket bar ── */
     .basket { position: fixed; bottom: 0; left: 0; right: 0; background: var(--primary);
@@ -221,6 +234,8 @@
   <!-- ABA VENDAS -->
   <div id="tpane-vendas" class="tab-pane active pb-basket">
     <div class="sec">
+      <div class="sec-title">Vendas em aberto</div>
+      <div id="sales-tabs" class="sale-tabs"></div>
       <div class="sec-title">Selecione os itens vendidos</div>
       <div id="prod-grid" class="prod-grid">
         <div class="loading" style="grid-column:span 2">
@@ -228,6 +243,27 @@
         </div>
       </div>
       <button class="btn-add-prod" onclick="abrirModalNovoProd()">+ Adicionar novo produto</button>
+      <div class="consumo-list" id="consumo-list"></div>
+      <div class="rcpt-box">
+        <div class="rcpt-title">Cupom da comanda</div>
+        <div id="rcpt-items"></div>
+        <div class="rcpt-total"><span>Total</span><span id="rcpt-total">R$ 0,00</span></div>
+      </div>
+      <div class="sec-title mt-14">Observação (opcional)</div>
+      <textarea id="v-obs" class="inp" rows="3" placeholder="Alguma observação sobre a venda…" style="resize:none;"></textarea>
+      <label class="upload-lbl">
+        📷 Foto de produto danificado / vencido
+        <input type="file" id="v-img" accept="image/*" capture="environment" style="display:none;" onchange="prevImg(this,'v-img-prev')">
+      </label>
+      <img id="v-img-prev" class="img-prev" alt="">
+      <div class="cons-actions">
+        <button class="btn btn-danger" onclick="excluirVendaAtiva()">🗑 Excluir</button>
+        <button class="btn btn-ghost" onclick="refazerVendaAtiva()">🔄 Refazer</button>
+      </div>
+      <div class="cons-actions">
+        <button class="btn btn-ghost" onclick="retirarSelecionados()">➖ Retirar selecionados</button>
+        <button class="btn btn-success" id="btn-venda" onclick="finalizarVendaPaga()">💰 Finalizar e pago</button>
+      </div>
     </div>
   </div>
 
@@ -252,47 +288,6 @@
     </div>
   </div>
 
-</div>
-
-<!-- Barra flutuante de carrinho -->
-<div class="basket" id="basket">
-  <div class="basket-info">
-    <b id="basket-cnt">0 itens</b>
-    <small>selecionados</small>
-  </div>
-  <button class="basket-cta" onclick="abrirConfirmacao()">CONFIRMAR →</button>
-</div>
-
-<!-- ══════════════════════════════════════
-     TELA 3 · CONFIRMAÇÃO DE VENDA
-══════════════════════════════════════ -->
-  <div id="tela-cfm" class="screen">
-  <div class="cfm-hdr">
-    <button class="back-btn" onclick="voltarVendas()">←</button>
-    <span class="cfm-title">CONFIRMAR PEDIDO</span>
-  </div>
-
-  <div id="cfm-list" class="cfm-list"></div>
-  <div class="sec" style="padding-top:0;">
-    <div class="rcpt-box">
-      <div class="rcpt-title">Cupom da venda</div>
-      <div id="rcpt-items"></div>
-      <div class="rcpt-total"><span>Total</span><span id="rcpt-total">R$ 0,00</span></div>
-    </div>
-  </div>
-
-  <div class="sec" style="padding-top:0;">
-    <div class="sec-title">Observação (opcional)</div>
-    <textarea id="v-obs" class="inp" rows="3"
-              placeholder="Alguma observação sobre a venda…" style="resize:none;"></textarea>
-    <label class="upload-lbl">
-      📷 Foto de produto danificado / vencido
-      <input type="file" id="v-img" accept="image/*" capture="environment" style="display:none;"
-             onchange="prevImg(this,'v-img-prev')">
-    </label>
-    <img id="v-img-prev" class="img-prev" alt="">
-    <button class="btn btn-success mt-14" id="btn-venda" onclick="enviarVenda()">✅ ENVIAR VENDA</button>
-  </div>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -344,7 +339,13 @@ const MSGS = [
 let nomeFuncionario = "";
 let lojaSelecionada = "LOJA PS";
 let catalogo = [];       // [{id, nome, preco}]
-let selecionados = new Set();
+let vendasAbertas = [];   // [{id, cliente, itens:[{id,nome,preco,qtd}], obs}]
+let vendaAtivaId = null;
+let itensSelecionadosRemocao = new Set();
+let enviandoVenda = false;
+const SALES_KEY = 'gullas_vendas_abertas_v1';
+const SALES_SEQ_KEY = 'gullas_vendas_seq_v1';
+const SALES_CLIENT_KEY = 'gullas_vendas_cliente_seq_v1';
 
 // ── Init ─────────────────────────────────────────────────────
 (function init() {
@@ -361,6 +362,15 @@ let selecionados = new Set();
   document.getElementById('inp-nome').addEventListener('keydown', e => {
     if (e.key === 'Enter') fazerLogin();
   });
+  const obsVenda = document.getElementById('v-obs');
+  if (obsVenda) {
+    obsVenda.addEventListener('input', e => {
+      const venda = getVendaAtiva();
+      if (!venda) return;
+      venda.obs = e.target.value || '';
+      salvarVendasAbertas();
+    });
+  }
 })();
 
 // ── Login / Logout ───────────────────────────────────────────
@@ -383,7 +393,9 @@ function fazerLogout() {
   localStorage.removeItem('gullas_loja');
   nomeFuncionario = "";
   lojaSelecionada = "LOJA PS";
-  selecionados.clear();
+  vendasAbertas = [];
+  vendaAtivaId = null;
+  itensSelecionadosRemocao.clear();
   mostrarTela('tela-login');
   document.getElementById('inp-nome').value = '';
   document.getElementById('inp-loja').value = lojaSelecionada;
@@ -419,6 +431,9 @@ async function carregarCatalogo() {
     else toast('Erro ao carregar catálogo. Sem conexão.');
   }
   renderGrid();
+  carregarVendasAbertas();
+  renderVendasAbertas();
+  renderConsumoAtual();
   renderSobras();
 }
 
@@ -428,124 +443,291 @@ function renderGrid() {
     g.innerHTML = '<p style="grid-column:span 2;text-align:center;color:#94a3b8;padding:20px;">Catálogo vazio<br><button class="btn btn-ghost mt-10" onclick="carregarCatalogo()" style="margin-top:8px;">🔄 Tentar carregar</button></p>';
     return;
   }
-  g.innerHTML = catalogo.map(it =>
-    `<div class="prod-card${selecionados.has(it.id) ? ' sel' : ''}"
-          id="card-${it.id}" onclick="toggleItem(${it.id})">
-       <div class="prod-card-name">${esc(it.nome)}</div>
-     </div>`
-  ).join('');
+  const venda = getVendaAtiva();
+  g.innerHTML = catalogo.map(it => {
+    const qtd = qtdItemNaVenda(venda, it.id);
+    return `<div class="prod-card" id="card-${it.id}" onclick="adicionarItemVenda(${it.id})">
+      <div class="prod-card-name">${esc(it.nome)}</div>
+      <div class="prod-badge">${qtd > 0 ? 'x' + qtd : '&nbsp;'}</div>
+    </div>`;
+  }).join('');
 }
 
-function toggleItem(id) {
-  selecionados.has(id) ? selecionados.delete(id) : selecionados.add(id);
-  const card = document.getElementById('card-' + id);
-  if (card) card.classList.toggle('sel', selecionados.has(id));
-  atualizarBasket();
-}
-
-function atualizarBasket() {
-  const n = selecionados.size;
-  document.getElementById('basket-cnt').textContent = n + (n === 1 ? ' item' : ' itens');
-  document.getElementById('basket').classList.toggle('show', n > 0);
-}
-
-// ── Confirmação ───────────────────────────────────────────────
-function abrirConfirmacao() {
-  if (!selecionados.size) return;
-  const list = document.getElementById('cfm-list');
-  list.innerHTML = catalogo
-    .filter(it => selecionados.has(it.id))
-    .map(it =>
-      `<div class="cfm-item" id="ci-${it.id}">
-         <input type="checkbox" class="cfm-chk" checked
-                onchange="toggleCfm(${it.id}, this.checked)">
-         <span class="cfm-name">${esc(it.nome)}</span>
-         <div class="qty-ctrl">
-            <button class="qty-btn" onclick="dQty(${it.id},-1)">−</button>
-            <input type="number" class="qty-inp" id="qi-${it.id}" value="1" min="1" max="999" oninput="atualizarCupomVenda()">
-            <button class="qty-btn" onclick="dQty(${it.id},1)">+</button>
-          </div>
-        </div>`
-    ).join('');
-  atualizarCupomVenda();
-  mostrarTela('tela-cfm');
-}
-
-function voltarVendas() {
-  mostrarTela('tela-principal');
-  mudarAba('vendas');
-}
-
-function toggleCfm(id, on) {
-  document.getElementById('ci-' + id).classList.toggle('removed', !on);
-  atualizarCupomVenda();
-}
-
-function dQty(id, d) {
-  const el = document.getElementById('qi-' + id);
-  if (el) {
-    el.value = Math.max(1, (parseInt(el.value) || 1) + d);
-    atualizarCupomVenda();
+function carregarVendasAbertas() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SALES_KEY) || '[]');
+    vendasAbertas = Array.isArray(parsed)
+      ? parsed.filter(v => v && v.id).map(v => ({
+          id: String(v.id),
+          cliente: String(v.cliente || 'Cliente'),
+          obs: String(v.obs || ''),
+          itens: Array.isArray(v.itens)
+            ? v.itens
+              .filter(i => i && i.id !== undefined && i.nome !== undefined)
+              .map(i => ({
+                id: i.id,
+                nome: String(i.nome),
+                preco: parseFloat(i.preco) || 0,
+                qtd: Math.max(1, parseInt(i.qtd, 10) || 1)
+              }))
+            : []
+        }))
+      : [];
+  } catch (err) {
+    console.warn('Falha ao carregar vendas em aberto do storage local.', err);
+    vendasAbertas = [];
   }
+  if (!vendasAbertas.length) {
+    criarNovaVenda(false);
+    return;
+  }
+  vendaAtivaId = vendasAbertas[0].id;
 }
 
-function itensVendaAtivos() {
-  return catalogo
-    .filter(it => selecionados.has(it.id))
-    .filter(it => {
-      const ci = document.getElementById('ci-' + it.id);
-      return ci && !ci.classList.contains('removed');
-    })
-    .map(it => ({
-      produto: it.nome,
-      qtd: Math.max(1, parseInt(document.getElementById('qi-' + it.id)?.value) || 1),
-      preco: parseFloat(it.preco) || 0
-    }));
+function salvarVendasAbertas() {
+  localStorage.setItem(SALES_KEY, JSON.stringify(vendasAbertas));
 }
 
-function atualizarCupomVenda() {
-  const itens = itensVendaAtivos();
+function getVendaAtiva() {
+  return vendasAbertas.find(v => v.id === vendaAtivaId) || null;
+}
+
+function qtdItemNaVenda(venda, itemId) {
+  if (!venda || !Array.isArray(venda.itens)) return 0;
+  const it = venda.itens.find(i => String(i.id) === String(itemId));
+  return it ? (parseInt(it.qtd, 10) || 0) : 0;
+}
+
+function gerarIdVenda() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  const atual = parseInt(localStorage.getItem(SALES_SEQ_KEY) || '0', 10) || 0;
+  const proximo = atual + 1;
+  localStorage.setItem(SALES_SEQ_KEY, String(proximo));
+  return 'v' + Date.now() + '_' + proximo + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+function proximoNomeCliente() {
+  const atual = parseInt(localStorage.getItem(SALES_CLIENT_KEY) || '0', 10) || 0;
+  const proximo = atual + 1;
+  localStorage.setItem(SALES_CLIENT_KEY, String(proximo));
+  return 'Cliente ' + proximo;
+}
+
+function criarNovaVenda(mostrarToast = true) {
+  const id = gerarIdVenda();
+  vendasAbertas.push({
+    id,
+    cliente: proximoNomeCliente(),
+    itens: [],
+    obs: ''
+  });
+  vendaAtivaId = id;
+  itensSelecionadosRemocao.clear();
+  salvarVendasAbertas();
+  renderVendasAbertas();
+  renderGrid();
+  renderConsumoAtual();
+  if (mostrarToast) toast('Nova venda aberta');
+}
+
+function selecionarVenda(id) {
+  if (!vendasAbertas.some(v => v.id === id)) return;
+  vendaAtivaId = id;
+  itensSelecionadosRemocao.clear();
+  renderVendasAbertas();
+  renderGrid();
+  renderConsumoAtual();
+}
+
+function renderVendasAbertas() {
+  const el = document.getElementById('sales-tabs');
+  if (!el) return;
+  if (!vendasAbertas.length) criarNovaVenda(false);
+  el.innerHTML = vendasAbertas.map(v => {
+    const qtd = (v.itens || []).reduce((acc, i) => acc + (parseInt(i.qtd, 10) || 0), 0);
+    return `<button class="sale-chip${v.id === vendaAtivaId ? ' active' : ''}" data-id="${esc(v.id)}" onclick="selecionarVenda(this.dataset.id)">${esc(v.cliente)} (${qtd})</button>`;
+  }).join('') + '<button class="sale-chip sale-chip-new" onclick="criarNovaVenda()">+ Nova venda</button>';
+}
+
+function adicionarItemVenda(itemId) {
+  const venda = getVendaAtiva();
+  if (!venda) return;
+  const cat = catalogo.find(c => String(c.id) === String(itemId));
+  if (!cat) return;
+  let item = venda.itens.find(i => String(i.id) === String(itemId));
+  if (!item) {
+    item = { id: cat.id, nome: cat.nome, preco: parseFloat(cat.preco) || 0, qtd: 0 };
+    venda.itens.push(item);
+  }
+  item.qtd = (parseInt(item.qtd, 10) || 0) + 1;
+  salvarVendasAbertas();
+  renderVendasAbertas();
+  renderGrid();
+  renderConsumoAtual();
+}
+
+function alterarQtdItem(itemId, delta) {
+  const venda = getVendaAtiva();
+  if (!venda) return;
+  const item = venda.itens.find(i => String(i.id) === String(itemId));
+  if (!item) return;
+  item.qtd = Math.max(1, (parseInt(item.qtd, 10) || 1) + delta);
+  salvarVendasAbertas();
+  renderVendasAbertas();
+  renderGrid();
+  renderConsumoAtual();
+}
+
+function editarQtdItem(itemId, value) {
+  const venda = getVendaAtiva();
+  if (!venda) return;
+  const item = venda.itens.find(i => String(i.id) === String(itemId));
+  if (!item) return;
+  item.qtd = Math.max(1, parseInt(value, 10) || 1);
+  salvarVendasAbertas();
+  renderVendasAbertas();
+  renderGrid();
+  renderConsumoAtual();
+}
+
+function marcarItemRemocao(itemId, on) {
+  const venda = getVendaAtiva();
+  if (!venda) return;
+  const id = String(itemId);
+  if (!(venda.itens || []).some(i => String(i.id) === id)) return;
+  if (on) itensSelecionadosRemocao.add(id);
+  else itensSelecionadosRemocao.delete(id);
+}
+
+function renderConsumoAtual() {
+  const venda = getVendaAtiva();
+  const list = document.getElementById('consumo-list');
   const box = document.getElementById('rcpt-items');
   const totalEl = document.getElementById('rcpt-total');
-  if (!box || !totalEl) return;
-  if (!itens.length) {
+  const obsEl = document.getElementById('v-obs');
+  const btn = document.getElementById('btn-venda');
+  if (!list || !box || !totalEl || !obsEl || !btn) return;
+
+  if (!venda) {
+    list.innerHTML = '<div class="empty">Sem venda ativa</div>';
+    box.innerHTML = '<div class="rcpt-empty">Nenhum item selecionado</div>';
+    totalEl.textContent = brl(0);
+    obsEl.value = '';
+    btn.disabled = true;
+    return;
+  }
+
+  obsEl.value = venda.obs || '';
+  btn.disabled = enviandoVenda || !(venda.itens && venda.itens.length);
+  btn.textContent = enviandoVenda ? 'ENVIANDO PAGO…' : '💰 Finalizar e pago';
+
+  if (!(venda.itens || []).length) {
+    list.innerHTML = '<div class="empty">Clique nos itens acima para registrar o consumo</div>';
     box.innerHTML = '<div class="rcpt-empty">Nenhum item selecionado</div>';
     totalEl.textContent = brl(0);
     return;
   }
+
+  list.innerHTML = venda.itens.map(i => `
+    <div class="cons-item">
+      <input type="checkbox" class="cfm-chk" data-id="${esc(i.id)}" ${itensSelecionadosRemocao.has(String(i.id)) ? 'checked' : ''} onchange="marcarItemRemocao(this.dataset.id, this.checked)">
+      <span class="cons-item-name">${esc(i.nome)}</span>
+      <div class="qty-ctrl">
+        <button class="qty-btn" data-id="${esc(i.id)}" onclick="alterarQtdItem(this.dataset.id, -1)">−</button>
+        <input type="number" class="qty-inp" data-id="${esc(i.id)}" value="${parseInt(i.qtd, 10) || 1}" min="1" max="999" oninput="editarQtdItem(this.dataset.id, this.value)">
+        <button class="qty-btn" data-id="${esc(i.id)}" onclick="alterarQtdItem(this.dataset.id, 1)">+</button>
+      </div>
+      <span class="cons-item-sub">${brl((parseFloat(i.preco) || 0) * (parseInt(i.qtd, 10) || 0))}</span>
+    </div>
+  `).join('');
+
   let total = 0;
-  box.innerHTML = itens.map(i => {
-    const sub = i.qtd * i.preco;
+  box.innerHTML = venda.itens.map(i => {
+    const qtd = parseInt(i.qtd, 10) || 0;
+    const preco = parseFloat(i.preco) || 0;
+    const sub = qtd * preco;
     total += sub;
-    return `<div class="rcpt-row">
-      <span>${esc(i.produto)} x${i.qtd}</span>
-      <span>${brl(i.preco)}</span>
-      <span>${brl(sub)}</span>
-    </div>`;
+    return `<div class="rcpt-row"><span>${esc(i.nome)} x${qtd}</span><span>${brl(preco)}</span><span>${brl(sub)}</span></div>`;
   }).join('');
   totalEl.textContent = brl(total);
 }
 
-// ── Enviar Venda ──────────────────────────────────────────────
-async function enviarVenda() {
+function retirarSelecionados() {
+  const venda = getVendaAtiva();
+  if (!venda) return;
+  if (!itensSelecionadosRemocao.size) { toast('Selecione itens para retirar'); return; }
+  venda.itens = (venda.itens || []).filter(i => !itensSelecionadosRemocao.has(String(i.id)));
+  itensSelecionadosRemocao.clear();
+  salvarVendasAbertas();
+  renderVendasAbertas();
+  renderGrid();
+  renderConsumoAtual();
+  toast('Itens retirados');
+}
+
+function refazerVendaAtiva() {
+  const venda = getVendaAtiva();
+  if (!venda) return;
+  if (!confirm('Refazer esta venda e limpar o consumo atual?')) return;
+  venda.itens = [];
+  venda.obs = '';
+  itensSelecionadosRemocao.clear();
+  salvarVendasAbertas();
+  renderVendasAbertas();
+  renderGrid();
+  renderConsumoAtual();
+  toast('Venda refeita');
+}
+
+function excluirVendaAtiva() {
+  const venda = getVendaAtiva();
+  if (!venda) return;
+  if (!confirm('Excluir esta venda em aberto?')) return;
+  vendasAbertas = vendasAbertas.filter(v => v.id !== venda.id);
+  if (!vendasAbertas.length) criarNovaVenda(false);
+  vendaAtivaId = vendasAbertas[0].id;
+  itensSelecionadosRemocao.clear();
+  salvarVendasAbertas();
+  renderVendasAbertas();
+  renderGrid();
+  renderConsumoAtual();
+  toast('Venda excluída');
+}
+
+// ── Finalizar venda (paga) ────────────────────────────────────
+async function finalizarVendaPaga() {
   const btn = document.getElementById('btn-venda');
-  const itens = itensVendaAtivos().map(i => ({ produto: i.produto, qtd: i.qtd }));
+  const venda = getVendaAtiva();
+  if (!venda) { toast('Sem venda ativa'); return; }
+  const itens = (venda.itens || [])
+    .map(i => ({ produto: i.nome, qtd: parseInt(i.qtd, 10) || 0 }))
+    .filter(i => i.qtd > 0);
 
   if (!itens.length) { toast('Nenhum item marcado'); return; }
 
-  const obs      = document.getElementById('v-obs').value;
-  const imgB64   = await imgBase64('v-img');
+  const obs = venda.obs || '';
+  const imgB64 = await imgBase64('v-img');
 
-  btn.textContent = 'ENVIANDO…'; btn.disabled = true;
+  enviandoVenda = true;
+  btn.textContent = 'ENVIANDO PAGO…'; btn.disabled = true;
   try {
     await post({ action: 'sale', itens, funcionario: nomeFuncionario, data: hojeLocalISO(), obs, imagemBase64: imgB64, loja: lojaSelecionada });
-    selecionados.clear();
-    resetField('v-obs'); resetFile('v-img', 'v-img-prev');
-    document.getElementById('basket').classList.remove('show');
-    showModalOk('Venda registrada! 🎉');
+    vendasAbertas = vendasAbertas.filter(v => v.id !== venda.id);
+    if (!vendasAbertas.length) criarNovaVenda(false);
+    vendaAtivaId = vendasAbertas[0].id;
+    itensSelecionadosRemocao.clear();
+    salvarVendasAbertas();
+    resetFile('v-img', 'v-img-prev');
+    renderVendasAbertas();
+    renderGrid();
+    renderConsumoAtual();
+    showModalOk('Venda paga e enviada ao ADM! 💰');
   } catch {
     toast('Erro ao enviar. Verifique a conexão.');
-    btn.textContent = '✅ ENVIAR VENDA'; btn.disabled = false;
+    btn.textContent = '💰 Finalizar e pago'; btn.disabled = false;
+  } finally {
+    enviandoVenda = false;
+    renderConsumoAtual();
   }
 }
 
@@ -637,12 +819,13 @@ function showModalOk(titulo) {
 function fecharModalOk() {
   document.getElementById('modal-ok').classList.remove('open');
   const bv = document.getElementById('btn-venda');
-  if (bv) { bv.textContent = '✅ ENVIAR VENDA'; bv.disabled = false; }
+  if (bv) { bv.textContent = '💰 Finalizar e pago'; bv.disabled = false; }
   const bs = document.getElementById('btn-sob');
   if (bs) { bs.textContent = 'ENVIAR SOBRAS DO DIA'; bs.disabled = false; }
   mostrarTela('tela-principal');
   mudarAba('vendas');
   renderGrid();
+  renderConsumoAtual();
 }
 
 // ── Imagem ────────────────────────────────────────────────────
