@@ -76,6 +76,7 @@
     .prod-card.sel::after { content: '✓'; position: absolute; top: 6px; right: 9px;
                             color: var(--primary); font-weight: 900; font-size: .82rem; }
     .prod-card-name { font-size: .85rem; font-weight: 600; color: var(--text); }
+    .prod-card-price { font-size: .78rem; color: var(--muted); margin-top: 3px; }
     .btn-add-prod { width: 100%; margin-top: 12px; padding: 12px; background: #f1f5f9;
                     border: 2px dashed var(--border); border-radius: var(--r); color: var(--muted);
                     font-size: .85rem; font-weight: 600; cursor: pointer; }
@@ -477,8 +478,13 @@ function renderGrid() {
   const venda = getVendaAtiva();
   g.innerHTML = catalogo.map(it => {
     const qtd = qtdItemNaVenda(venda, it.id);
+    const nomeNorm = it.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const priceLabel = nomeNorm.includes('acai')
+      ? '<div class="prod-card-price">por peso</div>'
+      : (parseFloat(it.preco) > 0 ? `<div class="prod-card-price">${brl(it.preco)}</div>` : '');
     return `<div class="prod-card" id="card-${it.id}" onclick="adicionarItemVenda(${it.id})">
       <div class="prod-card-name">${esc(it.nome)}</div>
+      ${priceLabel}
       <div class="prod-badge">${qtd > 0 ? 'x' + qtd : '&nbsp;'}</div>
     </div>`;
   }).join('');
