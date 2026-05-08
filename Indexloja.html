@@ -469,6 +469,13 @@ async function carregarCatalogo() {
   renderSobras();
 }
 
+function precoProdutoLabel(it) {
+  const nomeNorm = it.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (nomeNorm.includes('acai')) return '<div class="prod-card-price">por peso</div>';
+  if (parseFloat(it.preco) > 0) return `<div class="prod-card-price">${brl(it.preco)}</div>`;
+  return '';
+}
+
 function renderGrid() {
   const g = document.getElementById('prod-grid');
   if (!catalogo.length) {
@@ -478,13 +485,9 @@ function renderGrid() {
   const venda = getVendaAtiva();
   g.innerHTML = catalogo.map(it => {
     const qtd = qtdItemNaVenda(venda, it.id);
-    const nomeNorm = it.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const priceLabel = nomeNorm.includes('acai')
-      ? '<div class="prod-card-price">por peso</div>'
-      : (parseFloat(it.preco) > 0 ? `<div class="prod-card-price">${brl(it.preco)}</div>` : '');
     return `<div class="prod-card" id="card-${it.id}" onclick="adicionarItemVenda(${it.id})">
       <div class="prod-card-name">${esc(it.nome)}</div>
-      ${priceLabel}
+      ${precoProdutoLabel(it)}
       <div class="prod-badge">${qtd > 0 ? 'x' + qtd : '&nbsp;'}</div>
     </div>`;
   }).join('');
