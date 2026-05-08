@@ -191,6 +191,7 @@
     <div class="login-sub">Acesso restrito</div>
     <input id="inp-senha" type="password" class="inp-dark" placeholder="Senha…" autocomplete="current-password">
     <button class="btn btn-primary" style="width:100%;max-width:320px;" onclick="fazerLogin()">ENTRAR</button>
+    <p id="login-verse" style="margin-top:20px;text-align:center;color:#475569;font-style:italic;font-size:.82rem;max-width:320px;line-height:1.5;"></p>
   </div>
 </div>
 
@@ -487,6 +488,9 @@ let estufaSalvando = false;
   document.getElementById('inp-senha').addEventListener('keydown', e => {
     if (e.key === 'Enter') fazerLogin();
   });
+  // Passagem bíblica na tela de login
+  const verseEl = document.getElementById('login-verse');
+  if (verseEl) verseEl.textContent = MSGS[Math.floor(Math.random() * MSGS.length)];
 })();
 
 function ativarDashboard() {
@@ -724,16 +728,13 @@ function setLojaEstufa(loja, silencioso) {
   });
   const ativo = document.getElementById(ids[estufaLoja] || ids['GERAL']);
   if (ativo) ativo.classList.add('active');
-  if (!silencioso) {
-    const modal = document.getElementById('modal-estufa');
-    if (modal && modal.classList.contains('open')) carregarEstufa();
-  }
+  // Não recarrega automaticamente ao trocar de loja – use o botão 🔍
 }
 
 function abrirModalEstufa() {
   document.getElementById('modal-estufa').classList.add('open');
   setLojaEstufa(estufaLoja, true);
-  carregarEstufa();
+  // Não carrega automaticamente – use o botão 🔍 para buscar os dados
 }
 
 function fecharModalEstufa() {

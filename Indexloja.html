@@ -212,6 +212,7 @@
       <option value="LOJA IANDE">Loja Iande</option>
     </select>
     <button class="btn btn-primary" style="max-width:320px;" onclick="fazerLogin()">ACESSAR</button>
+    <p id="login-verse" style="margin-top:20px;text-align:center;color:var(--muted);font-style:italic;font-size:.82rem;max-width:320px;line-height:1.5;"></p>
   </div>
 </div>
 
@@ -257,8 +258,8 @@
       </label>
       <img id="v-img-prev" class="img-prev" alt="">
       <div class="cons-actions">
-        <button class="btn btn-danger" onclick="excluirVendaAtiva()">🗑 Excluir</button>
         <button class="btn btn-ghost" onclick="refazerVendaAtiva()">🔄 Refazer</button>
+        <button class="btn btn-ghost" onclick="abrirModalReabrirComanda()">🔓 Reabrir</button>
       </div>
       <div class="cons-actions">
         <button class="btn btn-ghost" onclick="retirarSelecionados()">➖ Retirar selecionados</button>
@@ -318,6 +319,30 @@
 
 <div id="toast" class="toast"></div>
 
+<!-- Reabrir comanda (conferência) -->
+<div id="modal-reabrir-comanda" class="modal-bg">
+  <div class="modal">
+    <div class="modal-title">🔓 Reabrir Comanda</div>
+    <div class="modal-msg">Digite o número da comanda para conferência<br>(ex: <b>5</b> para "Cliente 5")</div>
+    <input id="inp-num-comanda" type="number" class="inp" placeholder="Número da comanda…" min="1"
+           style="margin-bottom:12px;">
+    <button class="btn btn-primary" onclick="reabrirComandaPorNumero()">ABRIR PARA CONFERÊNCIA</button>
+    <button class="btn btn-ghost mt-10" onclick="fecharModalReabrirComanda()">CANCELAR</button>
+  </div>
+</div>
+
+<!-- Preço por peso (Açaí / produtos sem preço fixo) -->
+<div id="modal-preco-produto" class="modal-bg">
+  <div class="modal">
+    <div class="modal-title" id="modal-preco-titulo">💜 Preço do Açaí</div>
+    <div class="modal-msg">Produto vendido por peso.<br>Informe o valor cobrado nesta venda:</div>
+    <input id="inp-preco-acai" type="number" class="inp" placeholder="R$ 0,00" min="0" step="0.01"
+           style="margin-bottom:12px;">
+    <button class="btn btn-primary" onclick="confirmarPrecoProduto()">CONFIRMAR</button>
+    <button class="btn btn-ghost mt-10" onclick="fecharModalPrecoProduto()">CANCELAR</button>
+  </div>
+</div>
+
 <script>
 // ──────────────────────────────────────────────────────────────
 //  CONFIGURAÇÃO  –  cole a URL do seu Apps Script aqui
@@ -343,9 +368,12 @@ let vendasAbertas = [];   // [{id, cliente, itens:[{id,nome,preco,qtd}], obs}]
 let vendaAtivaId = null;
 let itensSelecionadosRemocao = new Set();
 let enviandoVenda = false;
+let _precoProdItemId = null;
 const SALES_KEY = 'gullas_vendas_abertas_v1';
 const SALES_SEQ_KEY = 'gullas_vendas_seq_v1';
 const SALES_CLIENT_KEY = 'gullas_vendas_cliente_seq_v1';
+const FINALIZED_KEY = 'gullas_finalizadas_v1';
+const FINALIZED_MAX = 100;
 
 // ── Init ─────────────────────────────────────────────────────
 (function init() {
@@ -353,6 +381,9 @@ const SALES_CLIENT_KEY = 'gullas_vendas_cliente_seq_v1';
   const loja = localStorage.getItem('gullas_loja');
   if (loja) lojaSelecionada = loja;
   document.getElementById('inp-loja').value = lojaSelecionada;
+  // Passagem bíblica na tela de login
+  const verseEl = document.getElementById('login-verse');
+  if (verseEl) verseEl.textContent = MSGS[Math.floor(Math.random() * MSGS.length)];
   if (nome) {
     nomeFuncionario = nome;
     document.getElementById('hdr-nome').textContent = nome + ' · ' + nomeLoja(lojaSelecionada);
@@ -554,7 +585,19 @@ function adicionarItemVenda(itemId) {
   if (!venda) return;
   const cat = catalogo.find(c => String(c.id) === String(itemId));
   if (!cat) return;
-  let item = venda.itens.find(i => String(i.id) === String(itemId));
+
+  // Açaí (produto por peso) – pede o preço apenas ao adicionar pela primeira vez
+  const nomeNorm = cat.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const existente = venda.itens.find(i => String(i.id) === String(itemId));
+  if (nomeNorm.includes('acai') && !existente) {
+    _precoProdItemId = itemId;
+    document.getElementById('modal-preco-titulo').textContent = '💜 Preço do ' + cat.nome;
+    document.getElementById('inp-preco-acai').value = '';
+    document.getElementById('modal-preco-produto').classList.add('open');
+    return;
+  }
+
+  let item = existente;
   if (!item) {
     item = { id: cat.id, nome: cat.nome, preco: parseFloat(cat.preco) || 0, qtd: 0 };
     venda.itens.push(item);
@@ -712,6 +755,7 @@ async function finalizarVendaPaga() {
   btn.textContent = 'ENVIANDO PAGO…'; btn.disabled = true;
   try {
     await post({ action: 'sale', itens, funcionario: nomeFuncionario, data: hojeLocalISO(), obs, imagemBase64: imgB64, loja: lojaSelecionada });
+    salvarVendaFinalizada(venda);
     vendasAbertas = vendasAbertas.filter(v => v.id !== venda.id);
     if (!vendasAbertas.length) criarNovaVenda(false);
     vendaAtivaId = vendasAbertas[0].id;
@@ -729,6 +773,75 @@ async function finalizarVendaPaga() {
     enviandoVenda = false;
     renderConsumoAtual();
   }
+}
+
+// ── Comanda finalizada (histórico local para reabrir) ─────────
+function salvarVendaFinalizada(venda) {
+  try {
+    const lista = JSON.parse(localStorage.getItem(FINALIZED_KEY) || '[]');
+    const m = String(venda.cliente || '').match(/Cliente\s+(\d+)/i);
+    const num = m ? parseInt(m[1], 10) : 0;
+    lista.push({ id: venda.id, cliente: venda.cliente, num, itens: (venda.itens || []).map(i => ({ ...i })), obs: venda.obs || '', ts: Date.now() });
+    localStorage.setItem(FINALIZED_KEY, JSON.stringify(lista.slice(-FINALIZED_MAX)));
+  } catch (err) { console.warn('Falha ao salvar comanda finalizada.', err); }
+}
+
+function abrirModalReabrirComanda() {
+  document.getElementById('inp-num-comanda').value = '';
+  document.getElementById('modal-reabrir-comanda').classList.add('open');
+}
+
+function fecharModalReabrirComanda() {
+  document.getElementById('modal-reabrir-comanda').classList.remove('open');
+}
+
+function reabrirComandaPorNumero() {
+  const num = parseInt(document.getElementById('inp-num-comanda').value, 10);
+  if (!num || num < 1) { toast('Digite um número de comanda válido'); return; }
+  try {
+    const lista = JSON.parse(localStorage.getItem(FINALIZED_KEY) || '[]');
+    const found = lista.slice().reverse().find(f => f.num === num);
+    if (!found) { toast('Comanda ' + num + ' não encontrada'); return; }
+    const id = gerarIdVenda();
+    vendasAbertas.push({
+      id,
+      cliente: found.cliente + ' (conferência)',
+      itens: (found.itens || []).map(i => ({ ...i })),
+      obs: found.obs || ''
+    });
+    vendaAtivaId = id;
+    itensSelecionadosRemocao.clear();
+    salvarVendasAbertas();
+    fecharModalReabrirComanda();
+    renderVendasAbertas();
+    renderGrid();
+    renderConsumoAtual();
+    toast('Comanda ' + num + ' reaberta para conferência');
+  } catch { toast('Erro ao buscar comanda'); }
+}
+
+// ── Preço por peso (Açaí) ─────────────────────────────────────
+function confirmarPrecoProduto() {
+  const preco = parseFloat(document.getElementById('inp-preco-acai').value);
+  if (!preco || preco <= 0 || preco > 9999) { toast('Informe um valor válido (máx. R$ 9.999)'); return; }
+  const itemId = _precoProdItemId;
+  _precoProdItemId = null;
+  fecharModalPrecoProduto();
+  const venda = getVendaAtiva();
+  if (!venda) return;
+  const cat = catalogo.find(c => String(c.id) === String(itemId));
+  if (!cat) return;
+  const item = { id: cat.id, nome: cat.nome, preco, qtd: 1 };
+  venda.itens.push(item);
+  salvarVendasAbertas();
+  renderVendasAbertas();
+  renderGrid();
+  renderConsumoAtual();
+}
+
+function fecharModalPrecoProduto() {
+  _precoProdItemId = null;
+  document.getElementById('modal-preco-produto').classList.remove('open');
 }
 
 // ── Sobras ────────────────────────────────────────────────────
