@@ -315,6 +315,7 @@
            style="margin-bottom:12px;">
     <button class="btn btn-primary" onclick="adicionarProduto()">ADICIONAR</button>
     <button class="btn btn-ghost mt-10" onclick="fecharModalNovo()">CANCELAR</button>
+    <div id="verse-novo" class="modal-msg modal-biblical" style="margin-top:16px;margin-bottom:0;font-size:.82rem;"></div>
   </div>
 </div>
 
@@ -329,6 +330,7 @@
            style="margin-bottom:12px;">
     <button class="btn btn-primary" onclick="reabrirComandaPorNumero()">ABRIR PARA CONFERÊNCIA</button>
     <button class="btn btn-ghost mt-10" onclick="fecharModalReabrirComanda()">CANCELAR</button>
+    <div id="verse-reabrir" class="modal-msg modal-biblical" style="margin-top:16px;margin-bottom:0;font-size:.82rem;"></div>
   </div>
 </div>
 
@@ -337,10 +339,11 @@
   <div class="modal">
     <div class="modal-title" id="modal-preco-titulo">💜 Preço do Açaí</div>
     <div class="modal-msg">Produto vendido por peso.<br>Informe o valor cobrado nesta venda:</div>
-    <input id="inp-preco-acai" type="number" class="inp" placeholder="R$ 0,00" min="0" step="0.01"
+    <input id="inp-preco-acai" type="text" inputmode="decimal" class="inp" placeholder="Ex: 2,50"
            style="margin-bottom:12px;">
     <button class="btn btn-primary" onclick="confirmarPrecoProduto()">CONFIRMAR</button>
     <button class="btn btn-ghost mt-10" onclick="fecharModalPrecoProduto()">CANCELAR</button>
+    <div id="verse-preco" class="modal-msg modal-biblical" style="margin-top:16px;margin-bottom:0;font-size:.82rem;"></div>
   </div>
 </div>
 
@@ -358,8 +361,19 @@ const MSGS = [
   "Seja forte e corajoso! (Josué 1:9)",
   "Consagre ao Senhor tudo o que você faz. (Provérbios 16:3)",
   "A alegria do Senhor é a vossa força. (Neemias 8:10)",
-  "O choro pode durar uma noite, mas a alegria vem pela manhã. (Salmo 30:5)"
+  "O choro pode durar uma noite, mas a alegria vem pela manhã. (Salmo 30:5)",
+  "Amor é paciente, amor é bondoso. (1 Coríntios 13:4)",
+  "Entrega o teu caminho ao Senhor; confia nele, e o mais ele fará. (Salmo 37:5)",
+  "Onde dois ou três se reúnem em meu nome, ali estou no meio deles. (Mateus 18:20)",
+  "Com Deus tudo é possível. (Mateus 19:26)",
+  "Aguarda o Senhor; tem bom ânimo, e ele fortalecerá o teu coração. (Salmo 27:14)",
+  "São Francisco de Assis: Começa fazendo o que é necessário, depois o que é possível.",
+  "Santa Teresa d'Ávila: Só Deus basta."
 ];
+
+function verseAleatorio() {
+  return MSGS[Math.floor(Math.random() * MSGS.length)];
+}
 
 // ── Estado ──────────────────────────────────────────────────
 let nomeFuncionario = "";
@@ -384,7 +398,7 @@ const FINALIZED_MAX = 100;
   document.getElementById('inp-loja').value = lojaSelecionada;
   // Passagem bíblica na tela de login
   const verseEl = document.getElementById('login-verse');
-  if (verseEl) verseEl.textContent = MSGS[Math.floor(Math.random() * MSGS.length)];
+  if (verseEl) verseEl.textContent = verseAleatorio();
   if (nome) {
     nomeFuncionario = nome;
     document.getElementById('hdr-nome').textContent = nome + ' · ' + nomeLoja(lojaSelecionada);
@@ -602,6 +616,7 @@ function adicionarItemVenda(itemId) {
     _precoProdItemId = itemId;
     document.getElementById('modal-preco-titulo').textContent = '💜 Preço do ' + cat.nome;
     document.getElementById('inp-preco-acai').value = '';
+    document.getElementById('verse-preco').textContent = verseAleatorio();
     document.getElementById('modal-preco-produto').classList.add('open');
     return;
   }
@@ -797,6 +812,7 @@ function salvarVendaFinalizada(venda) {
 
 function abrirModalReabrirComanda() {
   document.getElementById('inp-num-comanda').value = '';
+  document.getElementById('verse-reabrir').textContent = verseAleatorio();
   document.getElementById('modal-reabrir-comanda').classList.add('open');
 }
 
@@ -831,7 +847,8 @@ function reabrirComandaPorNumero() {
 
 // ── Preço por peso (Açaí) ─────────────────────────────────────
 function confirmarPrecoProduto() {
-  const preco = parseFloat(document.getElementById('inp-preco-acai').value);
+  const raw = document.getElementById('inp-preco-acai').value.trim().replace(',', '.');
+  const preco = parseFloat(raw);
   if (!preco || preco <= 0 || preco > 9999) { toast('Informe um valor válido (máx. R$ 9.999)'); return; }
   const itemId = _precoProdItemId;
   _precoProdItemId = null;
@@ -897,6 +914,7 @@ async function enviarSobras() {
 // ── Novo produto ──────────────────────────────────────────────
 function abrirModalNovoProd() {
   document.getElementById('novo-nome').value = '';
+  document.getElementById('verse-novo').textContent = verseAleatorio();
   document.getElementById('modal-novo').classList.add('open');
 }
 function fecharModalNovo() { document.getElementById('modal-novo').classList.remove('open'); }
@@ -934,7 +952,7 @@ async function fecharCaixaLoja() {
 // ── Modals ────────────────────────────────────────────────────
 function showModalOk(titulo) {
   document.getElementById('modal-ok-titulo').textContent = titulo;
-  document.getElementById('modal-ok-msg').textContent = MSGS[Math.floor(Math.random() * MSGS.length)];
+  document.getElementById('modal-ok-msg').textContent = verseAleatorio();
   document.getElementById('modal-ok').classList.add('open');
 }
 
